@@ -109,72 +109,117 @@ Teléfono: 3338182200 | Extensiones: 3312, 3313, 3315, 3322, 3324, 3331, 3330, 3
     tipoConsulta = 'Marco Normativo';
   }
   
-  // Construir respuesta en formato EXACTO de ejemplos
+  // Construir respuesta en formato EXACTO de ejemplos (versión mejorada)
   let respuesta = '';
   
-  // Introducción contextual (como en ejemplos)
-  if (tipoConsulta === 'Construcción y Obras') {
-    respuesta += `Esta situación requiere un análisis técnico-legal detallado, pues involucra la aplicación de normativas municipales y estatales que regulan tanto el desarrollo urbano como la preservación del patrimonio. Científicamente, cualquier intervención en el espacio urbano debe considerar el equilibrio entre innovación tecnológica y conservación del tejido urbano histórico, aspectos estrictamente regulados.\n\n`;
+  // Introducción contextual DRAMÁTICA (como en nuevo ejemplo)
+  if (tipoConsulta === 'Construcción y Obras' && queryLower.includes('demolición') || queryLower.includes('patrimonio')) {
+    respuesta += `Esta es una situación de extrema gravedad para la memoria histórica de nuestra ciudad. Científicamente, una finca con valor patrimonial es un "organismo arquitectónico" único; una vez que se interviene sin los procedimientos correctos, el daño puede ser irreversible porque se altera el ADN constructivo y urbano de Zapopan. Intervenir en zonas de protección sin los dictámenes técnicos correspondientes es como realizar una intervención mayor sin el diagnóstico previo adecuado, afectando permanentemente el ecosistema urbano histórico.\n\n`;
+  } else if (tipoConsulta === 'Construcción y Obras') {
+    respuesta += `Esta situación requiere un análisis técnico-legal riguroso, pues involucra la aplicación concurrente de normativas municipales y estatales que regulan tanto el desarrollo urbano contemporáneo como la preservación del patrimonio histórico construido. Desde una perspectiva científica, cualquier modificación en el tejido urbano, especialmente en zonas protegidas, debe equilibrar la innovación con la conservación del legado arquitectónico, aspectos que están estrictamente regulados para proteger la identidad urbana.\n\n`;
   } else if (tipoConsulta === 'Atribuciones y Facultades') {
-    respuesta += `El análisis de atribuciones y facultades implica comprender la distribución competencial entre las diferentes dependencias municipales, cada una con responsabilidades específicas definidas en la normativa aplicable. Esta estructura garantiza que las actuaciones administrativas sean especializadas y fundamentadas legalmente.\n\n`;
+    respuesta += `El análisis de atribuciones y facultades implica comprender la distribución competencial precisa entre las diferentes dependencias municipales, cada una con responsabilidades específicas definidas en la normativa aplicable. Esta estructura especializada garantiza que las actuaciones administrativas sean técnicamente fundamentadas y legalmente sólidas, protegiendo tanto los derechos de los ciudadanos como el interés público en la regulación urbana.\n\n`;
+  } else {
+    respuesta += `Esta consulta requiere un análisis basado en la normativa aplicable y los procedimientos establecidos por el Ayuntamiento de Zapopan. La respuesta se estructura considerando tanto el marco legal vigente como las competencias específicas de las dependencias municipales involucradas.\n\n`;
   }
   
-  // Análisis de Situación
+  // Análisis de Situación MEJORADO
   respuesta += `**Análisis de Situación**\n`;
-  respuesta += `La normativa aplicable establece marcos específicos para cada tipo de intervención. `;
+  
+  if (tipoConsulta === 'Construcción y Obras' && queryLower.includes('patrimonio')) {
+    respuesta += `El Código Urbano para el Estado de Jalisco establece que la conservación del patrimonio cultural es de interés social y una prioridad estatal (Art. 144). Por su parte, el Reglamento de Construcción de Zapopan y el Reglamento de Patrimonio Edificado dictan que cualquier finca dentro de una zona de protección no puede ser intervenida, y mucho menos demolida o modificada sustancialmente, sin un Dictamen Técnico Favorable y la licencia específica correspondiente.\n\n`;
+  }
   
   if (documents.length > 0) {
-    respuesta += `En este caso, se identificaron los siguientes aspectos relevantes:\n\n`;
+    respuesta += `En el caso específico planteado, la normativa aplicable establece los siguientes aspectos relevantes:\n\n`;
     respuesta += `${context}\n\n`;
   }
   
-  // Clasificación de Atribuciones (si aplica)
+  // Clasificación de Atribuciones MEJORADA (como en nuevo ejemplo)
   if (tipoConsulta === 'Atribuciones y Facultades' || tipoConsulta === 'Construcción y Obras') {
     respuesta += `**Clasificación de Atribuciones**\n`;
-    respuesta += `Esta materia involucra responsabilidades compartidas entre varias dependencias:\n\n`;
+    respuesta += `Esta situación involucra una responsabilidad compartida entre diversas áreas del Gobierno Municipal:\n\n`;
     
-    if (queryLower.includes('construcción') || queryLower.includes('obra')) {
+    if (queryLower.includes('patrimonio') || queryLower.includes('demolición') || queryLower.includes('centro histórico')) {
+      respuesta += `**Dirección de Inspección y Vigilancia:** Es la autoridad encargada de acudir al sitio para constatar la falta de documentos, clausurar la obra de inmediato y sancionar la intervención ilegal.\n`;
+      respuesta += `**Dirección de Patrimonio Urbano:** Es el área técnica responsable de evaluar el daño causado a la estructura y determinar si se debe obligar a la restitución o reconstrucción con materiales y técnicas originales.\n`;
+      respuesta += `**Dirección de Ordenamiento Territorial:** Se encarga de vigilar que se cumplan las normas específicas del Plan Parcial correspondiente a la zona de protección.\n\n`;
+    } else if (queryLower.includes('construcción') || queryLower.includes('obra')) {
       respuesta += `**Dirección de Inspección y Vigilancia:** Es la autoridad encargada de verificar el cumplimiento normativo y, en su caso, detener obras que carezcan de la documentación requerida.\n`;
       respuesta += `**Dirección de Licencias y Permisos de Construcción:** Área responsable de emitir los dictámenes técnicos y autorizaciones previas necesarias.\n`;
       respuesta += `**Dirección de Patrimonio Urbano** (si aplica): Interviene cuando las obras afectan inmuebles con valor histórico o zonas protegidas.\n\n`;
     } else {
       respuesta += `**Dirección de Inspección y Vigilancia:** Ejerce las facultades de verificación, supervisión y, en su caso, imposición de medidas correctivas.\n`;
-      respuesta += `**Otras dependencias municipales:** Según la materia específica, pueden intervenir áreas especializadas correspondientes.\n\n`;
+      respuesta += `**Otras dependencias municipales especializadas:** Según la materia específica, pueden intervenir áreas técnicas correspondientes para el análisis y resolución del caso.\n\n`;
     }
   }
   
-  // Sustento Legal (OBLIGATORIO - como en ejemplos)
+  // Sustento Legal MEJORADO (OBLIGATORIO - como en nuevo ejemplo)
   respuesta += `**Sustento Legal (Obligatorio)**\n`;
   
-  sources.forEach((source, index) => {
-    // Extraer artículo si está en el formato
-    const articuloMatch = source.match(/Artículo?\s*(\d+)/i);
-    const articulo = articuloMatch ? `Artículo ${articuloMatch[1]}` : 'Disposición aplicable';
-    
-    const reglamentoMatch = source.match(/(Reglamento|Código|Ley)[^:]*/i);
-    const reglamento = reglamentoMatch ? reglamentoMatch[0] : 'Normativa aplicable';
-    
-    respuesta += `${articulo} (${reglamento}): ${source.includes('-') ? source.split('-')[1]?.trim() : 'Establece los fundamentos jurídicos para la intervención correspondiente.'}\n`;
-  });
-  
-  // Información de Contacto (OBLIGATORIO - como en ejemplos)
-  respuesta += `\n**Información de Contacto**\n`;
-  respuesta += `Para asuntos específicos o reportes, puedes comunicarte a:\n`;
-  respuesta += `**Dirección de Inspección y Vigilancia:**\n`;
-  respuesta += `Teléfono: 3338182200 | Extensiones: 3312, 3313, 3315, 3322, 3324, 3331, 3330, 3342\n\n`;
-  
-  if (tipoConsulta === 'Construcción y Obras') {
-    respuesta += `**Dirección de Licencias y Permisos de Construcción:**\n`;
-    respuesta += `Teléfono: 3338182200 | Extensión: 3007\n\n`;
+  // Artículos específicos para casos de patrimonio/demolición
+  if (queryLower.includes('patrimonio') || queryLower.includes('demolición') || queryLower.includes('centro histórico')) {
+    respuesta += `**Artículo 34 (Reglamento de Construcción):** Es la base de la legalidad. Establece que todo propietario debe tramitar la licencia correspondiente para cualquier obra de construcción o demolición. Sin ella, la obra es inexistente ante la ley.\n`;
+    respuesta += `**Artículo 149 (Reglamento de Construcción):** Obliga a tener en el sitio de la obra la licencia original, los planos autorizados y la bitácora. Al carecer de dictamen y licencia, se viola este protocolo de control esencial.\n`;
+    respuesta += `**Artículo 177 (Reglamento de Construcción):** Dicta que cualquier acto u omisión que contravenga el reglamento o los planes parciales será sancionado por las autoridades municipales.\n`;
+    respuesta += `**Fundamento Estatal (Código Urbano, Art. 144):** Establece que la promoción del desarrollo urbano debe atender de forma prioritaria la conservación del patrimonio cultural del estado.\n`;
+    respuesta += `**Fundamento Específico (Reglamento de Patrimonio, Art. 68):** Prohíbe estrictamente la demolición de fincas con valor histórico o artístico.\n`;
+    respuesta += `**Fundamento Específico (Reglamento de Patrimonio, Art. 96):** Señala que cuando se realicen obras que se contrapongan al reglamento, se procederá a la demolición, restitución o reconstrucción a cargo del infractor.\n`;
+  } else {
+    // Sustento legal general basado en documentos encontrados
+    sources.forEach((source, index) => {
+      const articuloMatch = source.match(/Artículo?\s*(\d+)/i);
+      const articulo = articuloMatch ? `Artículo ${articuloMatch[1]}` : 'Disposición aplicable';
+      
+      const reglamentoMatch = source.match(/(Reglamento|Código|Ley)[^:]*/i);
+      const reglamento = reglamentoMatch ? reglamentoMatch[0] : 'Normativa aplicable';
+      
+      let explicacion = '';
+      if (source.includes('-')) {
+        explicacion = source.split('-')[1]?.trim();
+      } else if (articuloMatch) {
+        explicacion = `Establece los requisitos y procedimientos para la materia correspondiente.`;
+      } else {
+        explicacion = `Proporciona el marco jurídico aplicable al caso.`;
+      }
+      
+      respuesta += `${articulo} (${reglamento}): ${explicacion}\n`;
+    });
   }
   
-  // Nota Final (como en ejemplos)
-  respuesta += `**Nota:** La normativa aplicable establece que el incumplimiento de los requisitos y procedimientos puede derivar en la aplicación de sanciones administrativas, que pueden incluir desde multas hasta la orden de demolición o restitución, según la gravedad de la infracción y el daño causado.\n\n`;
+  // Información de Contacto MEJORADA (OBLIGATORIO - como en nuevo ejemplo)
+  respuesta += `\n**Información de Contacto**\n`;
+  
+  if (queryLower.includes('patrimonio') || queryLower.includes('demolición') || queryLower.includes('centro histórico')) {
+    respuesta += `Para reportar esta situación y activar los protocolos de protección correspondientes:\n\n`;
+    respuesta += `**Dirección de Inspección y Vigilancia:**\n`;
+    respuesta += `Teléfono: 3338182200 | Extensiones: 3312, 3313, 3315, 3322, 3324, 3331, 3330, 3342\n\n`;
+    respuesta += `**Dirección de Patrimonio Urbano:**\n`;
+    respuesta += `Teléfono: 3338182200 | Extensiones: 2082, 2084\n\n`;
+    respuesta += `**Dirección de Ordenamiento Territorial:**\n`;
+    respuesta += `Teléfono: 3338182200 | Extensión: 3147\n\n`;
+  } else {
+    respuesta += `Para asuntos específicos o reportes, puedes comunicarte a:\n`;
+    respuesta += `**Dirección de Inspección y Vigilancia:**\n`;
+    respuesta += `Teléfono: 3338182200 | Extensiones: 3312, 3313, 3315, 3322, 3324, 3331, 3330, 3342\n\n`;
+    
+    if (tipoConsulta === 'Construcción y Obras') {
+      respuesta += `**Dirección de Licencias y Permisos de Construcción:**\n`;
+      respuesta += `Teléfono: 3338182200 | Extensión: 3007\n\n`;
+    }
+  }
+  
+  // Nota Final MEJORADA (como en nuevo ejemplo)
+  if (queryLower.includes('patrimonio') || queryLower.includes('demolición') || queryLower.includes('centro histórico')) {
+    respuesta += `**Nota:** El municipio tiene la facultad de exigir que la finca sea reconstruida siguiendo las técnicas tradicionales originales (adobe, madera, sistemas regionales) para resarcir el daño al patrimonio colectivo de todos los zapopanos. La restitución debe realizarse a costa del infractor y bajo supervisión técnica especializada.\n\n`;
+  } else {
+    respuesta += `**Nota:** La normativa aplicable establece que el incumplimiento de los requisitos y procedimientos puede derivar en la aplicación de sanciones administrativas, que pueden incluir desde multas económicas hasta la orden de demolición, restitución o reconstrucción, según la gravedad de la infracción y el daño causado al patrimonio urbano o a terceros.\n\n`;
+  }
   
   // Footer del sistema
   respuesta += `---\n`;
-  respuesta += `*Sistema de consulta de la Dirección de Inspección y Vigilancia de Zapopan*\n`;
-  respuesta += `*Información basada en documentos oficiales disponibles | Fines referenciales*`;
+  respuesta += `*Sistema de consulta oficial de la Dirección de Inspección y Vigilancia del Ayuntamiento de Zapopan*\n`;
+  respuesta += `*Información basada en documentos normativos oficiales | Respuesta con fines informativos y referenciales*`;
   
   return respuesta;
 }
