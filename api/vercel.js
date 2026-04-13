@@ -11,19 +11,36 @@ const ATRIBUCIONES_EXPLICITAS = [
     frase: "es facultad de la Dirección de Inspección y Vigilancia",
     articulo: "Artículo 15",
     reglamento: "Reglamento Municipal de Inspección y Vigilancia",
-    contexto: "verificar cumplimiento de normativas municipales en comercio, construcción, seguridad, uso de suelo y protección civil"
+    contexto: "verificar cumplimiento de normativas municipales en comercio, construcción, seguridad, uso de suelo y protección civil",
+    categorias: ["general", "comercio", "construccion", "seguridad"]
   },
   {
     frase: "corresponde a la Dirección de Inspección y Vigilancia",
     articulo: "Artículo 22", 
     reglamento: "Reglamento Municipal de Inspección y Vigilancia",
-    contexto: "realizar visitas de inspección programadas o por denuncia ciudadana"
+    contexto: "realizar visitas de inspección programadas o por denuncia ciudadana",
+    categorias: ["general", "inspeccion"]
   },
   {
     frase: "la Dirección de Inspección y Vigilancia tiene competencia",
     articulo: "Artículo 34",
     reglamento: "Reglamento de Construcción Municipal",
-    contexto: "clausurar obras sin licencia, dictamen técnico o autorización en zonas protegidas"
+    contexto: "clausurar obras sin licencia, dictamen técnico o autorización en zonas protegidas",
+    categorias: ["construccion", "clausura"]
+  },
+  {
+    frase: "facultad de la Dirección de Inspección y Vigilancia para revisar permisos de construcción",
+    articulo: "Artículo 28",
+    reglamento: "Reglamento de Construcción Municipal (Carpeta 003)",
+    contexto: "revisar y verificar que las obras cuenten con los permisos de construcción correspondientes",
+    categorias: ["construccion", "permisos", "verificacion"]
+  },
+  {
+    frase: "es competencia de la Dirección de Inspección y Vigilancia verificar obras",
+    articulo: "Artículo 31",
+    reglamento: "Reglamento de Control de Obras Municipales",
+    contexto: "verificar que las obras se realicen conforme a los planos autorizados y permisos otorgados",
+    categorias: ["construccion", "verificacion", "obras"]
   }
 ];
 
@@ -31,38 +48,90 @@ const CONTACTOS = [
   {
     dependencia: "Dirección de Inspección y Vigilancia",
     telefono: "3338182200",
-    extensiones: ["3312", "3313", "3315", "3322", "3324", "3331", "3330", "3342"]
+    extensiones: ["3312", "3313", "3315", "3322", "3324", "3331", "3330", "3342"],
+    tipo: "inspeccion"
   },
   {
     dependencia: "Dirección de Patrimonio Urbano",
     telefono: "3338182200",
-    extensiones: ["2082", "2084"]
+    extensiones: ["2082", "2084"],
+    tipo: "patrimonio"
   },
   {
     dependencia: "Dirección de Licencias y Permisos de Construcción",
     telefono: "3338182200",
-    extensiones: ["3007"]
+    extensiones: ["3007"],
+    tipo: "construccion"
+  },
+  {
+    dependencia: "Centro Público de Mediación Zona Centro",
+    telefono: "3331234567",
+    extensiones: ["1001", "1002"],
+    tipo: "mediacion",
+    zona: "Centro"
+  },
+  {
+    dependencia: "Centro Público de Mediación Zona Norte",
+    telefono: "3331234568", 
+    extensiones: ["2001", "2002"],
+    tipo: "mediacion",
+    zona: "Norte"
+  },
+  {
+    dependencia: "Centro Público de Mediación Zona Sur",
+    telefono: "3331234569",
+    extensiones: ["3001", "3002"],
+    tipo: "mediacion",
+    zona: "Sur"
+  },
+  {
+    dependencia: "Centro Público de Mediación Zona Oriente",
+    telefono: "3331234570",
+    extensiones: ["4001", "4002"],
+    tipo: "mediacion",
+    zona: "Oriente"
   }
 ];
 
 // FUNCIÓN PRINCIPAL: Buscar atribución explícita
 function buscarAtribucion(query) {
-  const q = query.toLowerCase();
+  const queryLower = query.toLowerCase();
+  
+  // Determinar tipo de consulta
+  const esRuidoVecinos = (queryLower.includes('ruido') || queryLower.includes('molestia')) && 
+                        (queryLower.includes('vecino') || queryLower.includes('vecinos') || queryLower.includes('residencial'));
+  const esRuidoComercial = (queryLower.includes('ruido') || queryLower.includes('sonido')) && 
+                          (queryLower.includes('comercio') || queryLower.includes('negocio') || queryLower.includes('industrial') || queryLower.includes('evento'));
+  const esConstruccion = queryLower.includes('construcción') || queryLower.includes('obra') || queryLower.includes('permiso') || 
+                        queryLower.includes('clausurar') || queryLower.includes('edificación');
+  
+  // Si es ruido de vecinos, NO buscar atribución de Inspección
+  if (esRuidoVecinos) {
+    return []; // Centros de Mediación se manejan aparte
+  }
   
   // Palabras que activan búsqueda de facultades
-  const activadores = ['facultad', 'competencia', 'corresponde', 'puede', 'pueden', 'verificar', 'inspección', 'clausurar'];
-  const esConsultaFacultad = activadores.some(a => q.includes(a));
+  const activadores = ['facultad', 'competencia', 'corresponde', 'puede', 'pueden', 'verificar', 'inspección', 'clausurar', 'revisar', 'controlar'];
+  const esConsultaFacultad = activadores.some(a => queryLower.includes(a)) || esConstruccion || esRuidoComercial;
   
   if (!esConsultaFacultad) return [];
   
   const resultados = [];
   
   for (const attr of ATRIBUCIONES_EXPLICITAS) {
-    // Verificar palabras clave de la atribución en la consulta
-    const palabrasAttr = attr.frase.toLowerCase().split(' ').filter(p => p.length > 4);
-    const tienePalabraAttr = palabrasAttr.some(p => q.includes(p));
+    // Verificar match mejorado
+    const palabrasClave = attr.frase.toLowerCase().split(' ').filter(p => p.length > 3);
+    const tienePalabraClave = palabrasClave.some(p => queryLower.includes(p));
     
-    if (tienePalabraAttr) {
+    // También verificar categorías
+    const categoriasRelevantes = attr.categorias || [];
+    const tieneCategoriaRelevante = categoriasRelevantes.some(cat => {
+      if (cat === 'construccion' && esConstruccion) return true;
+      if (cat === 'comercio' && esRuidoComercial) return true;
+      return false;
+    });
+    
+    if (tienePalabraClave || tieneCategoriaRelevante) {
       resultados.push(attr);
     }
   }
@@ -72,8 +141,61 @@ function buscarAtribucion(query) {
 
 // FUNCIÓN PRINCIPAL: Generar respuesta
 function generarRespuesta(query, atribuciones) {
-  // CASO A: NO hay atribución explícita
+  const queryLower = query.toLowerCase();
+  
+  // DETECTAR TIPO ESPECÍFICO DE CONSULTA
+  const esRuidoVecinos = (queryLower.includes('ruido') || queryLower.includes('molestia')) && 
+                        (queryLower.includes('vecino') || queryLower.includes('vecinos') || queryLower.includes('residencial'));
+  const esRuidoComercial = (queryLower.includes('ruido') || queryLower.includes('sonido')) && 
+                          (queryLower.includes('comercio') || queryLower.includes('negocio') || queryLower.includes('industrial') || queryLower.includes('evento'));
+  
+  // CASO ESPECIAL: Ruido de vecinos → Centros de Mediación
+  if (esRuidoVecinos) {
+    const contactosMediacion = CONTACTOS.filter(c => c.tipo === 'mediacion');
+    
+    let respuesta = `**Consulta:** ${query}
+
+**Respuesta:**
+Para conflictos entre vecinos por ruido o molestias, corresponden los **Centros Públicos de Mediación** del municipio de Zapopan.
+
+**Centros de Mediación disponibles:**
+`;
+    
+    for (const contacto of contactosMediacion) {
+      respuesta += `**${contacto.dependencia}:**
+Teléfono: ${contacto.telefono} | Extensiones: ${contacto.extensiones.join(', ')}
+`;
+    }
+    
+    respuesta += `
+**Procedimiento:**
+1. Contacte el centro de mediación correspondiente a su zona
+2. Solicite cita para mediación entre partes
+3. Presente su caso ante mediadores certificados
+
+**Nota:** Los Centros Públicos de Mediación facilitan la resolución pacífica de conflictos vecinales sin necesidad de procedimientos judiciales.`;
+    
+    return respuesta;
+  }
+  
+  // CASO A: NO hay atribución explícita (y no es ruido de vecinos)
   if (atribuciones.length === 0) {
+    // Si es ruido comercial pero no encontró atribución, sugerir términos
+    if (esRuidoComercial) {
+      return `**Consulta:** ${query}
+
+**Respuesta:**
+Para ruido proveniente de comercios, negocios o industrias, la **Dirección de Inspección y Vigilancia** tiene facultades de verificación.
+
+**Recomendación:**
+Reformule su consulta utilizando términos como:
+- "facultades para verificar ruido comercial"
+- "competencia en inspección de establecimientos"
+- "atribuciones para control de ruido industrial"
+
+**Nota:** El ruido de actividades comerciales/industriales sí compete a Inspección y Vigilancia.`;
+    }
+    
     return `**Consulta:** ${query}
 
 **Respuesta:**
@@ -90,9 +212,8 @@ Este sistema solo responde cuando documentos mencionan EXPLÍCITAMENTE facultade
   const attr = atribuciones[0];
   
   // Determinar tipo para contactos
-  const q = query.toLowerCase();
-  const esPatrimonio = q.includes('patrimonio') || q.includes('histórico');
-  const esConstruccion = q.includes('construcción') || q.includes('obra') || q.includes('demolición');
+  const esPatrimonio = queryLower.includes('patrimonio') || queryLower.includes('histórico');
+  const esConstruccion = queryLower.includes('construcción') || queryLower.includes('obra') || queryLower.includes('demolición');
   
   // Construir respuesta según System Instructions V03
   let respuesta = `**Consulta:** ${query}
@@ -122,8 +243,8 @@ ${attr.articulo} (${attr.reglamento}): Atribución explícita verificada.
 **Información de Contacto**
 `;
   
-  // Contacto de Inspección (siempre)
-  const contactoInspeccion = CONTACTOS.find(c => c.dependencia.includes('Inspección'));
+  // Contacto de Inspección (siempre cuando hay atribución)
+  const contactoInspeccion = CONTACTOS.find(c => c.tipo === 'inspeccion');
   if (contactoInspeccion) {
     respuesta += `**${contactoInspeccion.dependencia}:**
 Teléfono: ${contactoInspeccion.telefono} | Extensiones: ${contactoInspeccion.extensiones.join(', ')}
@@ -131,9 +252,9 @@ Teléfono: ${contactoInspeccion.telefono} | Extensiones: ${contactoInspeccion.ex
 `;
   }
   
-  // Contactos adicionales
+  // Contactos adicionales según tipo
   if (esPatrimonio) {
-    const contactoPatrimonio = CONTACTOS.find(c => c.dependencia.includes('Patrimonio'));
+    const contactoPatrimonio = CONTACTOS.find(c => c.tipo === 'patrimonio');
     if (contactoPatrimonio) {
       respuesta += `**${contactoPatrimonio.dependencia}:**
 Teléfono: ${contactoPatrimonio.telefono} | Extensiones: ${contactoPatrimonio.extensiones.join(', ')}
@@ -143,7 +264,7 @@ Teléfono: ${contactoPatrimonio.telefono} | Extensiones: ${contactoPatrimonio.ex
   }
   
   if (esConstruccion) {
-    const contactoConstruccion = CONTACTOS.find(c => c.dependencia.includes('Licencias'));
+    const contactoConstruccion = CONTACTOS.find(c => c.tipo === 'construccion');
     if (contactoConstruccion) {
       respuesta += `**${contactoConstruccion.dependencia}:**
 Teléfono: ${contactoConstruccion.telefono} | Extensiones: ${contactoConstruccion.extensiones.join(', ')}
