@@ -1,0 +1,49 @@
+{
+  "system": {
+    "name": "Chatbot Inspección y Vigilancia Zapopan",
+    "version": "1.1.0",
+    "created": "2026-04-08",
+    "security_note": "PLANTILLA - CONFIGURAR CONTRASEÑAS EN PRODUCCIÓN",
+    "hash_algorithm": "SHA-256",
+    "password_requirements": "Mínimo 12 caracteres, mayúsculas, minúsculas, números, símbolos"
+  },
+  "password_reset_required": true,
+  "users": {
+    "administrador_supremo": {
+      "username": "administrador_supremo",
+      "password_hash": "[CONFIGURAR_EN_PRODUCCIÓN]",
+      "role": "administrador_supremo",
+      "department": "general",
+      "permissions": [
+        "chat",
+        "audit",
+        "admin",
+        "users"
+      ],
+      "created": "2026-04-08",
+      "last_password_change": "2026-04-08",
+      "active": true,
+      "note": "Configurar contraseña segura en producción"
+    },
+    "dirección_inspección": {
+      "username": "dirección_inspección",
+      "password_hash": "[CONFIGURAR_EN_PRODUCCIÓN]",
+      "role": "usuario",
+      "department": "dirección",
+      "permissions": [
+        "chat"
+      ],
+      "created": "2026-04-08",
+      "last_password_change": "2026-04-08",
+      "active": true,
+      "note": "Configurar contraseña segura en producción"
+    }
+  },
+  "setup_instructions": [
+    "1. Copiar este archivo a 'users.json'",
+    "2. Generar hash SHA-256 de contraseña segura para cada usuario",
+    "3. Reemplazar '[CONFIGURAR_EN_PRODUCCIÓN]' con el hash correspondiente",
+    "4. No commitear 'users.json' al repositorio (está en .gitignore)",
+    "5. Usar variables de entorno o sistema de autenticación externo en producción"
+  ]
+}

@@ -1,0 +1,5 @@
+# Python 3.9+ requirements for Vercel
+# Minimal dependencies for serverless function
+
+# No external dependencies needed - using Python standard library only
+# This empty requirements.txt tells Vercel to use Python runtime

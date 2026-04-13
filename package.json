@@ -1,0 +1,8 @@
+{
+  "name": "chatbot-inspeccion-zapopan",
+  "version": "1.0.0",
+  "description": "Chatbot MVP para Dirección de Inspección y Vigilancia Zapopan",
+  "engines": {
+    "node": ">=18"
+  }
+}

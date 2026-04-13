@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "/Users/luisalbertoaguirregomez/.openclaw/workspace/projects/chatbot_inspeccion_v03/backend/simple_backend.py", line 12, in <module>
+    import jwt
+  File "/Users/luisalbertoaguirregomez/Library/Python/3.12/lib/python/site-packages/jwt/__init__.py", line 1, in <module>
+    from .api_jwk import PyJWK, PyJWKSet
+  File "/Users/luisalbertoaguirregomez/Library/Python/3.12/lib/python/site-packages/jwt/api_jwk.py", line 8, in <module>
+    from .algorithms import get_default_algorithms, has_crypto, requires_cryptography
+  File "/Users/luisalbertoaguirregomez/Library/Python/3.12/lib/python/site-packages/jwt/algorithms.py", line 23, in <module>
+    from .utils import (
+  File "/Users/luisalbertoaguirregomez/Library/Python/3.12/lib/python/site-packages/jwt/utils.py", line 7, in <module>
+    from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurve
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/cryptography/hazmat/primitives/asymmetric/ec.py", line 11, in <module>
+    from cryptography.exceptions import UnsupportedAlgorithm, _Reasons
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/cryptography/exceptions.py", line 9, in <module>
+    from cryptography.hazmat.bindings._rust import exceptions as rust_exceptions
+ImportError: dlopen(/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/_cffi_backend.cpython-312-darwin.so, 0x0002): tried: '/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/_cffi_backend.cpython-312-darwin.so' (mach-o file, but is an incompatible architecture (have 'x86_64', need 'arm64e' or 'arm64e.v1' or 'arm64' or 'arm64')), '/System/Volumes/Preboot/Cryptexes/OS/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/_cffi_backend.cpython-312-darwin.so' (no such file), '/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/_cffi_backend.cpython-312-darwin.so' (mach-o file, but is an incompatible architecture (have 'x86_64', need 'arm64e' or 'arm64e.v1' or 'arm64' or 'arm64'))

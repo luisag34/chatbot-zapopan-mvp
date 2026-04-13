@@ -1,0 +1,48 @@
+{
+  "projectId": "prj_chatbot-zapopan",
+  "orgId": "team_luis",
+  "settings": {
+    "framework": null,
+    "devCommand": null,
+    "installCommand": "pip install -r requirements_vercel.txt",
+    "buildCommand": null,
+    "outputDirectory": null,
+    "rootDirectory": null,
+    "nodeVersion": "18.x",
+    "createdAt": 1712494800000
+  },
+  "targets": {
+    "production": {
+      "alias": ["chatbot-inspeccion-zapopan.vercel.app"],
+      "aliasAssigned": 1712494800000,
+      "createdAt": 1712494800000,
+      "createdIn": "na1",
+      "deploymentHostname": "chatbot-inspeccion-zapopan",
+      "forced": false,
+      "id": "dpl_chatbotzapopan",
+      "meta": {},
+      "plan": "hobby",
+      "readyState": "READY",
+      "type": "LAMBDAS",
+      "url": "chatbot-inspeccion-zapopan.vercel.app",
+      "userId": "luisag34"
+    }
+  },
+  "latestDeployments": [
+    {
+      "alias": ["chatbot-inspeccion-zapopan.vercel.app"],
+      "aliasAssigned": 1712494800000,
+      "createdAt": 1712494800000,
+      "createdIn": "na1",
+      "deploymentHostname": "chatbot-inspeccion-zapopan",
+      "forced": false,
+      "id": "dpl_chatbotzapopan",
+      "meta": {},
+      "plan": "hobby",
+      "readyState": "READY",
+      "type": "LAMBDAS",
+      "url": "chatbot-inspeccion-zapopan.vercel.app",
+      "userId": "luisag34"
+    }
+  ]
+}

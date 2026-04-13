@@ -1,0 +1,8 @@
+# Dependencias mínimas para Vercel serverless
+# Sin dependencias pesadas para optimizar cold start
+
+# Python standard library only - no external dependencies
+# El sistema RAG usa solo bibliotecas estándar de Python
+
+# Nota: Vercel Python runtime incluye bibliotecas estándar
+# No se necesitan dependencias externas para este MVP optimizado

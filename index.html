@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Inspección y Vigilancia Zapopan</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .header {
+            background-color: #003366;
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            background-color: #e8f5e9;
+            border-left: 5px solid #4caf50;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .endpoints {
+            background-color: #e3f2fd;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        code {
+            background-color: #f1f1f1;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .button {
+            background-color: #003366;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .button:hover {
+            background-color: #002244;
+        }
+        .login-form {
+            max-width: 400px;
+            margin: 30px auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏛️ Chatbot Inspección y Vigilancia Zapopan</h1>
+        <p>Sistema de consulta sobre facultades de la Dirección de Inspección y Vigilancia</p>
+        <p><strong>Acceso restringido a personal autorizado</strong></p>
+    </div>
+
+    <div class="container">
+        <div class="status">
+            <h2>✅ Sistema Operativo</h2>
+            <p>Deployment exitoso en Vercel - MVP Funcional</p>
+            <p><strong>URL:</strong> <code>https://chatbot-inspeccion-zapopan.vercel.app</code></p>
+            <p><strong>Fecha:</strong> 7 de Abril 2026</p>
+            <p><strong>Estado:</strong> <span style="color: #4caf50;">●</span> En línea</p>
+        </div>
+
+        <h2>🔐 Acceso al Sistema</h2>
+        <div class="login-form">
+            <h3>Iniciar Sesión</h3>
+            <form id="loginForm">
+                <input type="text" id="username" placeholder="Usuario" required>
+                <input type="password" id="password" placeholder="Contraseña" required>
+                <button type="submit" class="button">Ingresar</button>
+            </form>
+            <p><small>⚠️ <strong>CREDENCIALES ROTADAS:</strong> Contactar al administrador para nuevas credenciales</small></p>
+        </div>
+
+        <div class="endpoints">
+            <h2>🔧 Endpoints API Disponibles</h2>
+            <ul>
+                <li><strong>GET</strong> <code>/health</code> - Verificación del sistema</li>
+                <li><strong>POST</strong> <code>/api/login</code> - Autenticación de usuarios</li>
+                <li><strong>GET</strong> <code>/</code> - Esta página de inicio</li>
+            </ul>
+            
+            <h3>Probar endpoints:</h3>
+            <a href="/health" class="button" target="_blank">Probar /health</a>
+            <button class="button" onclick="testLogin()">Probar /api/login</button>
+        </div>
+
+        <h2>📋 Información del Proyecto</h2>
+        <p>Este es el <strong>MVP (Minimum Viable Product)</strong> del Chatbot para:</p>
+        <ul>
+            <li>Consultas sobre facultades de la Dirección de Inspección y Vigilancia</li>
+            <li>Acceso a documentos estatales y NOM federales</li>
+            <li>Consulta de reglamentos municipales</li>
+            <li>Información sobre códigos y normativa aplicable</li>
+        </ul>
+
+        <h2>🏰 Créditos</h2>
+        <p><strong>Desarrollado por:</strong> Dr. Victor von Doom🛡️</p>
+        <p><strong>Para:</strong> Ayuntamiento de Zapopan</p>
+        <p><strong>Fecha de deployment:</strong> 7 de Abril 2026</p>
+        <p><strong>Plataforma:</strong> Vercel</p>
+        <p><strong>Repositorio:</strong> <a href="https://github.com/luisag34/chatbot-inspeccion-zapopan" target="_blank">GitHub</a></p>
+    </div>
+
+    <script>
+        // Manejar login form
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`✅ Login exitoso\nBienvenido: ${data.user.name}\nToken: ${data.token.substring(0, 20)}...`);
+                } else {
+                    alert(`❌ Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`❌ Error de conexión: ${error.message}`);
+            }
+        });
+
+        // Función para probar login
+        function testLogin() {
+            fetch('/api/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: 'administrador_supremo',
+                    password: ''  // CONTRASEÑA ROTADA
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`✅ Login de prueba exitoso\nUsuario: ${data.user.username}\nRol: ${data.user.role}`);
+                } else {
+                    alert(`❌ Login falló: ${data.error}`);
+                }
+            })
+            .catch(error => {
+                alert(`❌ Error: ${error.message}`);
+            });
+        }
+
+        // Verificar estado del sistema al cargar
+        fetch('/health')
+            .then(response => response.json())
+            .then(data => {
+                console.log('✅ Sistema saludable:', data);
+            })
+            .catch(error => {
+                console.warn('⚠️ Error verificando salud:', error);
+            });
+    </script>
+</body>
+</html>
