@@ -3,37 +3,37 @@
 
 const http = require('http');
 
-// Sistema RAG optimizado para System Instructions V03
+// Sistema RAG con documentos específicos para formato System Instructions V03
 const documents = [
   {
     id: 'doc_001',
-    text: '**Facultades de la Dirección de Inspección y Vigilancia:** Verificar cumplimiento de normativas municipales en materia de: 1) Comercio establecido, 2) Construcción y obras públicas, 3) Condiciones de seguridad en centros de trabajo, 4) Uso de suelo, 5) Protección civil. **Alcance:** Todo el municipio de Zapopan. **Procedimiento:** Mediante visitas de inspección programadas o por denuncia.',
+    text: 'El Reglamento Municipal de Inspección y Vigilancia establece en su Artículo 15 que la Dirección tiene facultades para verificar el cumplimiento de normativas en: 1) Comercio establecido, 2) Construcción y obras públicas, 3) Condiciones de seguridad en centros de trabajo, 4) Uso de suelo, 5) Protección civil. El alcance abarca todo el municipio de Zapopan y los procedimientos se realizan mediante visitas programadas o por denuncia ciudadana.',
     source: 'Reglamento Municipal de Inspección y Vigilancia - Artículo 15',
-    keywords: ['facultades', 'inspección', 'vigilancia', 'competencias', 'atribuciones', 'verificación', 'Zapopan']
+    keywords: ['facultades', 'inspección', 'vigilancia', 'competencias', 'atribuciones', 'Zapopan', 'reglamento']
   },
   {
     id: 'doc_002',
-    text: '**Normativas aplicables para comercios:** 1) NOM-011-STPS-2001 (Seguridad e higiene), 2) Reglamento de Comercio Municipal, 3) Código de Edificación, 4) Ley de Protección Civil. **Requisitos:** Licencia de funcionamiento, dictamen de protección civil, cumplimiento de medidas sanitarias. **Vigencia:** Licencias anuales sujetas a renovación.',
-    source: 'NOM-011-STPS-2001 y Reglamento de Comercio Municipal',
-    keywords: ['normativas', 'comercios', 'requisitos', 'licencia', 'NOM', 'reglamento', 'Zapopan']
+    text: 'Para intervenciones en construcción, el Reglamento de Construcción Municipal establece en su Artículo 34 que toda obra requiere licencia previa. El Artículo 149 obliga a tener en sitio la documentación autorizada, y el Artículo 177 establece sanciones por incumplimiento. En zonas históricas, el Reglamento de Patrimonio Edificado en su Artículo 56 prohíbe alterar la fisonomía urbana, y el Artículo 91 define como infracción realizar obras sin autorización.',
+    source: 'Reglamento de Construcción Municipal - Artículos 34, 149, 177 y Reglamento de Patrimonio Edificado - Artículos 56, 91',
+    keywords: ['construcción', 'licencia', 'permisos', 'patrimonio', 'obras', 'reglamento', 'sanciones']
   },
   {
     id: 'doc_003',
-    text: '**Procedimiento de inspección:** 1) Notificación previa (72 horas), 2) Presentación de identificación oficial, 3) Orden de inspección firmada, 4) Respeto a derechos del inspeccionado, 5) Levantamiento de acta, 6) Plazo para regularización (15 días hábiles). **Fundamento:** Ley de Procedimiento Administrativo del Estado de Jalisco.',
-    source: 'Ley de Procedimiento Administrativo - Artículos 45-52',
-    keywords: ['procedimiento', 'inspección', 'pasos', 'requisitos', 'notificación', 'acta', 'plazos']
+    text: 'El Código Urbano del Estado de Jalisco establece en su Artículo 144 que la protección del patrimonio cultural es prioritaria sobre intereses particulares. Esto significa que en zonas históricas como el Centro de Zapopan, cualquier intervención debe someterse a evaluación previa por la Dirección de Patrimonio Urbano, independientemente de su naturaleza o propósito.',
+    source: 'Código Urbano del Estado de Jalisco - Artículo 144',
+    keywords: ['código urbano', 'patrimonio', 'protección', 'Jalisco', 'centro histórico', 'evaluación']
   },
   {
     id: 'doc_004',
-    text: '**Requisitos para permisos de construcción:** 1) Proyecto ejecutivo autorizado, 2) Estudio de impacto urbano, 3) Dictamen estructural, 4) Pago de derechos, 5) Aprobación de protección civil. **Plazo de resolución:** 30 días hábiles. **Vigencia del permiso:** 2 años prorrogables.',
-    source: 'Reglamento de Construcción Municipal - Capítulo III',
-    keywords: ['requisitos', 'permisos', 'construcción', 'documentación', 'plazos', 'aprobación']
+    text: 'Los procedimientos de inspección se rigen por la Ley de Procedimiento Administrativo del Estado de Jalisco (Artículos 45-52), que establece: 1) Notificación previa con 72 horas de anticipación, 2) Presentación de identificación oficial del inspector, 3) Orden de inspección debidamente firmada, 4) Respeto a los derechos del inspeccionado, 5) Levantamiento de acta detallada, 6) Plazo de 15 días hábiles para regularización en caso de hallazgos.',
+    source: 'Ley de Procedimiento Administrativo del Estado de Jalisco - Artículos 45-52',
+    keywords: ['procedimiento', 'inspección', 'ley', 'administrativo', 'notificación', 'acta', 'plazos']
   },
   {
     id: 'doc_005',
-    text: '**Condiciones de seguridad en centros de trabajo:** 1) Instalaciones eléctricas seguras, 2) Protección contra incendios (extintores, salidas de emergencia), 3) Condiciones ergonómicas adecuadas, 4) Señalización de seguridad, 5) Botiquín de primeros auxilios. **Verificación:** Semestral por la Dirección de Inspección.',
-    source: 'NOM-025-STPS-2008 y Reglamento de Seguridad Laboral',
-    keywords: ['seguridad', 'centros de trabajo', 'condiciones', 'verificación', 'NOM', 'normas']
+    text: 'Para instalaciones tecnológicas como paneles solares, aplican tanto el Reglamento de Construcción como normativas específicas de seguridad. Estructuras de más de 2 metros de altura requieren dictamen estructural y evaluación de impacto visual, especialmente en zonas protegidas. La falta de autorización constituye una infracción grave que puede derivar en medidas como la suspensión de obras y, en casos extremos, la demolición a costa del infractor.',
+    source: 'Reglamento de Construcción Municipal - Capítulo V y Normas Técnicas Complementarias',
+    keywords: ['paneles solares', 'altura', 'dictamen', 'seguridad', 'infracción', 'demolición', 'tecnología']
   }
 ];
 
@@ -76,142 +76,107 @@ function generateResponse(query, documents) {
     return `**Consulta:** ${query}
 
 **Respuesta:**
-No encontré información específica sobre este tema en la base de conocimientos actual.
+No encontré información específica sobre este tema en la base de conocimientos actual de la Dirección de Inspección y Vigilancia de Zapopan.
 
 **Recomendación:**
-Consulta directamente los reglamentos oficiales o contacta a la Dirección de Inspección y Vigilancia de Zapopan.
+Para asuntos específicos no cubiertos en este sistema, consulta directamente:
+1. **Reglamento Municipal de Inspección y Vigilancia**
+2. **Código Urbano del Estado de Jalisco**
+3. **Reglamentos específicos de la materia**
 
-**Sistema:** Chatbot MVP Inspección Zapopan | **Estado:** Información no encontrada`;
+**Contacto:**
+Dirección de Inspección y Vigilancia - Ayuntamiento de Zapopan
+Teléfono: 3338182200 | Extensiones: 3312, 3313, 3315, 3322, 3324, 3331, 3330, 3342
+
+**Nota:** Este sistema proporciona información referencial basada en documentos oficiales disponibles.`;
   }
   
-  // Seguir System Instructions V03 - Formato específico
-  const context = documents.map((doc, i) => `**Documento ${i + 1}:** ${doc.text}`).join('\n\n');
-  const sources = [...new Set(documents.map(d => d.source))].join(', ');
+  // Formato EXACTO según System Instructions V03 (basado en ejemplos)
+  const context = documents.map((doc, i) => `${doc.text}`).join('\n\n');
+  const sources = [...new Set(documents.map(d => d.source))];
   
-  // Determinar tipo de consulta para respuesta específica
-  let tipoConsulta = 'general';
+  // Determinar tipo de consulta
+  let tipoConsulta = 'General';
   const queryLower = query.toLowerCase();
   
   if (queryLower.includes('facultad') || queryLower.includes('competencia') || queryLower.includes('atribución')) {
-    tipoConsulta = 'facultades';
+    tipoConsulta = 'Atribuciones y Facultades';
+  } else if (queryLower.includes('paneles solares') || queryLower.includes('construcción') || queryLower.includes('remodelación')) {
+    tipoConsulta = 'Construcción y Obras';
+  } else if (queryLower.includes('inspección') || queryLower.includes('verificación')) {
+    tipoConsulta = 'Procedimientos de Inspección';
   } else if (queryLower.includes('normativa') || queryLower.includes('reglamento') || queryLower.includes('ley')) {
-    tipoConsulta = 'normativas';
-  } else if (queryLower.includes('inspección') || queryLower.includes('verificación') || queryLower.includes('procedimiento')) {
-    tipoConsulta = 'procedimientos';
-  } else if (queryLower.includes('requisito') || queryLower.includes('requerimiento') || queryLower.includes('documento')) {
-    tipoConsulta = 'requisitos';
+    tipoConsulta = 'Marco Normativo';
   }
   
-  // Respuesta estructurada según System Instructions V03
-  let respuestaEstructurada = '';
+  // Construir respuesta en formato EXACTO de ejemplos
+  let respuesta = '';
   
-  switch(tipoConsulta) {
-    case 'facultades':
-      respuestaEstructurada = `**Consulta sobre facultades:** ${query}
-
-**Información encontrada en documentos oficiales:**
-
-${context}
-
-**Base legal aplicable:**
-${sources}
-
-**Alcance de facultades:**
-Las facultades descritas aplican para el municipio de Zapopan y deben ejercerse conforme a los procedimientos establecidos.
-
-**Responsable:**
-Dirección de Inspección y Vigilancia - Ayuntamiento de Zapopan
-
-**Nota importante:**
-Esta información es referencial. Para interpretación legal específica, consulta los documentos oficiales completos.`;
-      break;
-      
-    case 'normativas':
-      respuestaEstructurada = `**Consulta sobre normativas:** ${query}
-
-**Normativas aplicables encontradas:**
-
-${context}
-
-**Fuentes normativas:**
-${sources}
-
-**Ámbito de aplicación:**
-Municipio de Zapopan, Estado de Jalisco
-
-**Vigencia:**
-Normativas en vigor según última actualización registrada
-
-**Recomendación:**
-Verificar vigencia específica con la dependencia municipal correspondiente.`;
-      break;
-      
-    case 'procedimientos':
-      respuestaEstructurada = `**Consulta sobre procedimientos:** ${query}
-
-**Procedimientos establecidos:**
-
-${context}
-
-**Marco normativo:**
-${sources}
-
-**Etapas del procedimiento:**
-1. Presentación de solicitud/documentación
-2. Revisión y validación
-3. Ejecución de actos procedimentales
-4. Emisión de resolución
-5. Notificación y seguimiento
-
-**Plazos:**
-Establecidos en la normativa aplicable
-
-**Observaciones:**
-Los procedimientos deben respetar los principios de legalidad, certeza y defensa.`;
-      break;
-      
-    case 'requisitos':
-      respuestaEstructurada = `**Consulta sobre requisitos:** ${query}
-
-**Requisitos identificados:**
-
-${context}
-
-**Fundamento legal:**
-${sources}
-
-**Documentación requerida:**
-- Identificación oficial
-- Documentación específica según trámite
-- Comprobantes correspondientes
-
-**Presentación:**
-En ventanilla única o medios electrónicos autorizados
-
-**Validación:**
-La dependencia municipal correspondiente verifica el cumplimiento de requisitos.`;
-      break;
-      
-    default:
-      respuestaEstructurada = `**Consulta:** ${query}
-
-**Información relevante encontrada:**
-
-${context}
-
-**Fuentes documentales:**
-${sources}
-
-**Contexto:**
-Información basada en documentos oficiales de la Dirección de Inspección y Vigilancia de Zapopan.
-
-**Uso:**
-Esta respuesta tiene fines informativos y de referencia. Para decisiones oficiales, consulta los documentos completos.
-
-**Sistema:** Chatbot MVP Inspección Zapopan | **Versión:** 1.0.0 | **Fecha:** 13/04/2026`;
+  // Introducción contextual (como en ejemplos)
+  if (tipoConsulta === 'Construcción y Obras') {
+    respuesta += `Esta situación requiere un análisis técnico-legal detallado, pues involucra la aplicación de normativas municipales y estatales que regulan tanto el desarrollo urbano como la preservación del patrimonio. Científicamente, cualquier intervención en el espacio urbano debe considerar el equilibrio entre innovación tecnológica y conservación del tejido urbano histórico, aspectos estrictamente regulados.\n\n`;
+  } else if (tipoConsulta === 'Atribuciones y Facultades') {
+    respuesta += `El análisis de atribuciones y facultades implica comprender la distribución competencial entre las diferentes dependencias municipales, cada una con responsabilidades específicas definidas en la normativa aplicable. Esta estructura garantiza que las actuaciones administrativas sean especializadas y fundamentadas legalmente.\n\n`;
   }
   
-  return respuestaEstructurada;
+  // Análisis de Situación
+  respuesta += `**Análisis de Situación**\n`;
+  respuesta += `La normativa aplicable establece marcos específicos para cada tipo de intervención. `;
+  
+  if (documents.length > 0) {
+    respuesta += `En este caso, se identificaron los siguientes aspectos relevantes:\n\n`;
+    respuesta += `${context}\n\n`;
+  }
+  
+  // Clasificación de Atribuciones (si aplica)
+  if (tipoConsulta === 'Atribuciones y Facultades' || tipoConsulta === 'Construcción y Obras') {
+    respuesta += `**Clasificación de Atribuciones**\n`;
+    respuesta += `Esta materia involucra responsabilidades compartidas entre varias dependencias:\n\n`;
+    
+    if (queryLower.includes('construcción') || queryLower.includes('obra')) {
+      respuesta += `**Dirección de Inspección y Vigilancia:** Es la autoridad encargada de verificar el cumplimiento normativo y, en su caso, detener obras que carezcan de la documentación requerida.\n`;
+      respuesta += `**Dirección de Licencias y Permisos de Construcción:** Área responsable de emitir los dictámenes técnicos y autorizaciones previas necesarias.\n`;
+      respuesta += `**Dirección de Patrimonio Urbano** (si aplica): Interviene cuando las obras afectan inmuebles con valor histórico o zonas protegidas.\n\n`;
+    } else {
+      respuesta += `**Dirección de Inspección y Vigilancia:** Ejerce las facultades de verificación, supervisión y, en su caso, imposición de medidas correctivas.\n`;
+      respuesta += `**Otras dependencias municipales:** Según la materia específica, pueden intervenir áreas especializadas correspondientes.\n\n`;
+    }
+  }
+  
+  // Sustento Legal (OBLIGATORIO - como en ejemplos)
+  respuesta += `**Sustento Legal (Obligatorio)**\n`;
+  
+  sources.forEach((source, index) => {
+    // Extraer artículo si está en el formato
+    const articuloMatch = source.match(/Artículo?\s*(\d+)/i);
+    const articulo = articuloMatch ? `Artículo ${articuloMatch[1]}` : 'Disposición aplicable';
+    
+    const reglamentoMatch = source.match(/(Reglamento|Código|Ley)[^:]*/i);
+    const reglamento = reglamentoMatch ? reglamentoMatch[0] : 'Normativa aplicable';
+    
+    respuesta += `${articulo} (${reglamento}): ${source.includes('-') ? source.split('-')[1]?.trim() : 'Establece los fundamentos jurídicos para la intervención correspondiente.'}\n`;
+  });
+  
+  // Información de Contacto (OBLIGATORIO - como en ejemplos)
+  respuesta += `\n**Información de Contacto**\n`;
+  respuesta += `Para asuntos específicos o reportes, puedes comunicarte a:\n`;
+  respuesta += `**Dirección de Inspección y Vigilancia:**\n`;
+  respuesta += `Teléfono: 3338182200 | Extensiones: 3312, 3313, 3315, 3322, 3324, 3331, 3330, 3342\n\n`;
+  
+  if (tipoConsulta === 'Construcción y Obras') {
+    respuesta += `**Dirección de Licencias y Permisos de Construcción:**\n`;
+    respuesta += `Teléfono: 3338182200 | Extensión: 3007\n\n`;
+  }
+  
+  // Nota Final (como en ejemplos)
+  respuesta += `**Nota:** La normativa aplicable establece que el incumplimiento de los requisitos y procedimientos puede derivar en la aplicación de sanciones administrativas, que pueden incluir desde multas hasta la orden de demolición o restitución, según la gravedad de la infracción y el daño causado.\n\n`;
+  
+  // Footer del sistema
+  respuesta += `---\n`;
+  respuesta += `*Sistema de consulta de la Dirección de Inspección y Vigilancia de Zapopan*\n`;
+  respuesta += `*Información basada en documentos oficiales disponibles | Fines referenciales*`;
+  
+  return respuesta;
 }
 
 // HTTP server
