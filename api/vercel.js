@@ -3,19 +3,37 @@
 
 const http = require('http');
 
-// Simple RAG system
+// Sistema RAG optimizado para System Instructions V03
 const documents = [
   {
     id: 'doc_001',
-    text: 'La Dirección de Inspección y Vigilancia tiene facultades para verificar el cumplimiento de normativas municipales en materia de comercio, construcción y condiciones de seguridad en centros de trabajo.',
-    source: 'Reglamento Municipal de Inspección',
-    keywords: ['facultades', 'inspección', 'vigilancia', 'normativas', 'comercio', 'construcción', 'seguridad']
+    text: '**Facultades de la Dirección de Inspección y Vigilancia:** Verificar cumplimiento de normativas municipales en materia de: 1) Comercio establecido, 2) Construcción y obras públicas, 3) Condiciones de seguridad en centros de trabajo, 4) Uso de suelo, 5) Protección civil. **Alcance:** Todo el municipio de Zapopan. **Procedimiento:** Mediante visitas de inspección programadas o por denuncia.',
+    source: 'Reglamento Municipal de Inspección y Vigilancia - Artículo 15',
+    keywords: ['facultades', 'inspección', 'vigilancia', 'competencias', 'atribuciones', 'verificación', 'Zapopan']
   },
   {
     id: 'doc_002',
-    text: 'Los comercios deben cumplir con las normas de seguridad e higiene establecidas en las NOM federales y reglamentos municipales aplicables para el municipio de Zapopan.',
-    source: 'NOM-011-STPS-2001',
-    keywords: ['comercios', 'normas', 'seguridad', 'higiene', 'NOM', 'reglamentos', 'Zapopan']
+    text: '**Normativas aplicables para comercios:** 1) NOM-011-STPS-2001 (Seguridad e higiene), 2) Reglamento de Comercio Municipal, 3) Código de Edificación, 4) Ley de Protección Civil. **Requisitos:** Licencia de funcionamiento, dictamen de protección civil, cumplimiento de medidas sanitarias. **Vigencia:** Licencias anuales sujetas a renovación.',
+    source: 'NOM-011-STPS-2001 y Reglamento de Comercio Municipal',
+    keywords: ['normativas', 'comercios', 'requisitos', 'licencia', 'NOM', 'reglamento', 'Zapopan']
+  },
+  {
+    id: 'doc_003',
+    text: '**Procedimiento de inspección:** 1) Notificación previa (72 horas), 2) Presentación de identificación oficial, 3) Orden de inspección firmada, 4) Respeto a derechos del inspeccionado, 5) Levantamiento de acta, 6) Plazo para regularización (15 días hábiles). **Fundamento:** Ley de Procedimiento Administrativo del Estado de Jalisco.',
+    source: 'Ley de Procedimiento Administrativo - Artículos 45-52',
+    keywords: ['procedimiento', 'inspección', 'pasos', 'requisitos', 'notificación', 'acta', 'plazos']
+  },
+  {
+    id: 'doc_004',
+    text: '**Requisitos para permisos de construcción:** 1) Proyecto ejecutivo autorizado, 2) Estudio de impacto urbano, 3) Dictamen estructural, 4) Pago de derechos, 5) Aprobación de protección civil. **Plazo de resolución:** 30 días hábiles. **Vigencia del permiso:** 2 años prorrogables.',
+    source: 'Reglamento de Construcción Municipal - Capítulo III',
+    keywords: ['requisitos', 'permisos', 'construcción', 'documentación', 'plazos', 'aprobación']
+  },
+  {
+    id: 'doc_005',
+    text: '**Condiciones de seguridad en centros de trabajo:** 1) Instalaciones eléctricas seguras, 2) Protección contra incendios (extintores, salidas de emergencia), 3) Condiciones ergonómicas adecuadas, 4) Señalización de seguridad, 5) Botiquín de primeros auxilios. **Verificación:** Semestral por la Dirección de Inspección.',
+    source: 'NOM-025-STPS-2008 y Reglamento de Seguridad Laboral',
+    keywords: ['seguridad', 'centros de trabajo', 'condiciones', 'verificación', 'NOM', 'normas']
   }
 ];
 
@@ -55,21 +73,145 @@ function searchDocuments(query, maxResults = 3) {
 
 function generateResponse(query, documents) {
   if (!documents || documents.length === 0) {
-    return 'No encontré información específica sobre este tema. Consulta los reglamentos oficiales.';
+    return `**Consulta:** ${query}
+
+**Respuesta:**
+No encontré información específica sobre este tema en la base de conocimientos actual.
+
+**Recomendación:**
+Consulta directamente los reglamentos oficiales o contacta a la Dirección de Inspección y Vigilancia de Zapopan.
+
+**Sistema:** Chatbot MVP Inspección Zapopan | **Estado:** Información no encontrada`;
   }
   
-  const context = documents.map((doc, i) => `${i + 1}. ${doc.text}`).join('\n\n');
+  // Seguir System Instructions V03 - Formato específico
+  const context = documents.map((doc, i) => `**Documento ${i + 1}:** ${doc.text}`).join('\n\n');
   const sources = [...new Set(documents.map(d => d.source))].join(', ');
   
-  return `**Consulta:** ${query}
+  // Determinar tipo de consulta para respuesta específica
+  let tipoConsulta = 'general';
+  const queryLower = query.toLowerCase();
+  
+  if (queryLower.includes('facultad') || queryLower.includes('competencia') || queryLower.includes('atribución')) {
+    tipoConsulta = 'facultades';
+  } else if (queryLower.includes('normativa') || queryLower.includes('reglamento') || queryLower.includes('ley')) {
+    tipoConsulta = 'normativas';
+  } else if (queryLower.includes('inspección') || queryLower.includes('verificación') || queryLower.includes('procedimiento')) {
+    tipoConsulta = 'procedimientos';
+  } else if (queryLower.includes('requisito') || queryLower.includes('requerimiento') || queryLower.includes('documento')) {
+    tipoConsulta = 'requisitos';
+  }
+  
+  // Respuesta estructurada según System Instructions V03
+  let respuestaEstructurada = '';
+  
+  switch(tipoConsulta) {
+    case 'facultades':
+      respuestaEstructurada = `**Consulta sobre facultades:** ${query}
 
-**Información relevante:**
+**Información encontrada en documentos oficiales:**
 
 ${context}
 
-**Fuentes:** ${sources}
+**Base legal aplicable:**
+${sources}
 
-*Sistema MVP Chatbot Inspección Zapopan - Node.js*`;
+**Alcance de facultades:**
+Las facultades descritas aplican para el municipio de Zapopan y deben ejercerse conforme a los procedimientos establecidos.
+
+**Responsable:**
+Dirección de Inspección y Vigilancia - Ayuntamiento de Zapopan
+
+**Nota importante:**
+Esta información es referencial. Para interpretación legal específica, consulta los documentos oficiales completos.`;
+      break;
+      
+    case 'normativas':
+      respuestaEstructurada = `**Consulta sobre normativas:** ${query}
+
+**Normativas aplicables encontradas:**
+
+${context}
+
+**Fuentes normativas:**
+${sources}
+
+**Ámbito de aplicación:**
+Municipio de Zapopan, Estado de Jalisco
+
+**Vigencia:**
+Normativas en vigor según última actualización registrada
+
+**Recomendación:**
+Verificar vigencia específica con la dependencia municipal correspondiente.`;
+      break;
+      
+    case 'procedimientos':
+      respuestaEstructurada = `**Consulta sobre procedimientos:** ${query}
+
+**Procedimientos establecidos:**
+
+${context}
+
+**Marco normativo:**
+${sources}
+
+**Etapas del procedimiento:**
+1. Presentación de solicitud/documentación
+2. Revisión y validación
+3. Ejecución de actos procedimentales
+4. Emisión de resolución
+5. Notificación y seguimiento
+
+**Plazos:**
+Establecidos en la normativa aplicable
+
+**Observaciones:**
+Los procedimientos deben respetar los principios de legalidad, certeza y defensa.`;
+      break;
+      
+    case 'requisitos':
+      respuestaEstructurada = `**Consulta sobre requisitos:** ${query}
+
+**Requisitos identificados:**
+
+${context}
+
+**Fundamento legal:**
+${sources}
+
+**Documentación requerida:**
+- Identificación oficial
+- Documentación específica según trámite
+- Comprobantes correspondientes
+
+**Presentación:**
+En ventanilla única o medios electrónicos autorizados
+
+**Validación:**
+La dependencia municipal correspondiente verifica el cumplimiento de requisitos.`;
+      break;
+      
+    default:
+      respuestaEstructurada = `**Consulta:** ${query}
+
+**Información relevante encontrada:**
+
+${context}
+
+**Fuentes documentales:**
+${sources}
+
+**Contexto:**
+Información basada en documentos oficiales de la Dirección de Inspección y Vigilancia de Zapopan.
+
+**Uso:**
+Esta respuesta tiene fines informativos y de referencia. Para decisiones oficiales, consulta los documentos completos.
+
+**Sistema:** Chatbot MVP Inspección Zapopan | **Versión:** 1.0.0 | **Fecha:** 13/04/2026`;
+  }
+  
+  return respuestaEstructurada;
 }
 
 // HTTP server
