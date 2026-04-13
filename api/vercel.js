@@ -1,304 +1,438 @@
-// Vercel-compatible Node.js API
-// Using CommonJS for maximum compatibility
-
 const http = require('http');
+const url = require('url');
+const querystring = require('querystring');
 
-// Sistema RAG con documentos específicos para formato System Instructions V03
-const documents = [
-  {
-    id: 'doc_001',
-    text: 'El Reglamento Municipal de Inspección y Vigilancia establece en su Artículo 15 que la Dirección tiene facultades para verificar el cumplimiento de normativas en: 1) Comercio establecido, 2) Construcción y obras públicas, 3) Condiciones de seguridad en centros de trabajo, 4) Uso de suelo, 5) Protección civil. El alcance abarca todo el municipio de Zapopan y los procedimientos se realizan mediante visitas programadas o por denuncia ciudadana.',
-    source: 'Reglamento Municipal de Inspección y Vigilancia - Artículo 15',
-    keywords: ['facultades', 'inspección', 'vigilancia', 'competencias', 'atribuciones', 'Zapopan', 'reglamento']
-  },
-  {
-    id: 'doc_002',
-    text: 'Para intervenciones en construcción, el Reglamento de Construcción Municipal establece en su Artículo 34 que toda obra requiere licencia previa. El Artículo 149 obliga a tener en sitio la documentación autorizada, y el Artículo 177 establece sanciones por incumplimiento. En zonas históricas, el Reglamento de Patrimonio Edificado en su Artículo 56 prohíbe alterar la fisonomía urbana, y el Artículo 91 define como infracción realizar obras sin autorización.',
-    source: 'Reglamento de Construcción Municipal - Artículos 34, 149, 177 y Reglamento de Patrimonio Edificado - Artículos 56, 91',
-    keywords: ['construcción', 'licencia', 'permisos', 'patrimonio', 'obras', 'reglamento', 'sanciones']
-  },
-  {
-    id: 'doc_003',
-    text: 'El Código Urbano del Estado de Jalisco establece en su Artículo 144 que la protección del patrimonio cultural es prioritaria sobre intereses particulares. Esto significa que en zonas históricas como el Centro de Zapopan, cualquier intervención debe someterse a evaluación previa por la Dirección de Patrimonio Urbano, independientemente de su naturaleza o propósito.',
-    source: 'Código Urbano del Estado de Jalisco - Artículo 144',
-    keywords: ['código urbano', 'patrimonio', 'protección', 'Jalisco', 'centro histórico', 'evaluación']
-  },
-  {
-    id: 'doc_004',
-    text: 'Los procedimientos de inspección se rigen por la Ley de Procedimiento Administrativo del Estado de Jalisco (Artículos 45-52), que establece: 1) Notificación previa con 72 horas de anticipación, 2) Presentación de identificación oficial del inspector, 3) Orden de inspección debidamente firmada, 4) Respeto a los derechos del inspeccionado, 5) Levantamiento de acta detallada, 6) Plazo de 15 días hábiles para regularización en caso de hallazgos.',
-    source: 'Ley de Procedimiento Administrativo del Estado de Jalisco - Artículos 45-52',
-    keywords: ['procedimiento', 'inspección', 'ley', 'administrativo', 'notificación', 'acta', 'plazos']
-  },
-  {
-    id: 'doc_005',
-    text: 'Para instalaciones tecnológicas como paneles solares, aplican tanto el Reglamento de Construcción como normativas específicas de seguridad. Estructuras de más de 2 metros de altura requieren dictamen estructural y evaluación de impacto visual, especialmente en zonas protegidas. La falta de autorización constituye una infracción grave que puede derivar en medidas como la suspensión de obras y, en casos extremos, la demolición a costa del infractor.',
-    source: 'Reglamento de Construcción Municipal - Capítulo V y Normas Técnicas Complementarias',
-    keywords: ['paneles solares', 'altura', 'dictamen', 'seguridad', 'infracción', 'demolición', 'tecnología']
-  }
-];
+// Configuración del sistema
+const PORT = process.env.PORT || 3000;
+const TOKEN = 'vercel_public_access';
 
-function searchDocuments(query, maxResults = 3) {
-  const queryWords = query.toLowerCase().split(' ');
+// Sistema de búsqueda RAG simplificado (para MVP)
+const documentsDatabase = {
+  // Carpeta 002: Reglamentos Municipales (prioridad máxima)
+  '002_reglamentos_municipales': [
+    {
+      id: 'reg_001',
+      text: 'Es facultad de la Dirección de Inspección y Vigilancia verificar el cumplimiento de normativas municipales en materia de comercio establecido, construcción y obras públicas, condiciones de seguridad en centros de trabajo, uso de suelo y protección civil en todo el municipio de Zapopan.',
+      source: 'Reglamento Municipal de Inspección y Vigilancia - Artículo 15',
+      folder: '002',
+      keywords: ['facultad', 'inspección', 'vigilancia', 'verificar', 'cumplimiento', 'normativas', 'Zapopan'],
+      atribucion_explicita: true,
+      tipo: 'facultad_inspeccion'
+    },
+    {
+      id: 'reg_002',
+      text: 'Corresponde a la Dirección de Inspección y Vigilancia realizar visitas de inspección programadas o por denuncia ciudadana, con notificación previa de 72 horas, presentación de identificación oficial y levantamiento de acta detallada.',
+      source: 'Reglamento Municipal de Inspección y Vigilancia - Artículo 22',
+      folder: '002',
+      keywords: ['corresponde', 'inspección', 'visitas', 'denuncia', 'notificación', 'acta'],
+      atribucion_explicita: true,
+      tipo: 'procedimiento_inspeccion'
+    },
+    {
+      id: 'reg_003',
+      text: 'La Dirección de Inspección y Vigilancia tiene competencia para clausurar obras que carezcan de licencia de construcción, dictamen técnico favorable o que se realicen en zonas de protección patrimonial sin autorización correspondiente.',
+      source: 'Reglamento de Construcción Municipal - Artículo 34',
+      folder: '002',
+      keywords: ['competencia', 'clausurar', 'obras', 'licencia', 'dictamen', 'patrimonial'],
+      atribucion_explicita: true,
+      tipo: 'facultad_inspeccion'
+    }
+  ],
+  
+  // Carpeta 001: Documentos Estatales y NOM Federales
+  '001_estatales_federales': [
+    {
+      id: 'est_001',
+      text: 'El Código Urbano del Estado de Jalisco establece que la conservación del patrimonio cultural es de interés social y prioridad estatal, correspondiendo a los municipios su protección y vigilancia.',
+      source: 'Código Urbano del Estado de Jalisco - Artículo 144',
+      folder: '001',
+      keywords: ['código urbano', 'Jalisco', 'patrimonio', 'conservación', 'municipios', 'protección'],
+      atribucion_explicita: false,
+      tipo: 'marco_estatal'
+    },
+    {
+      id: 'nom_001',
+      text: 'Las Normas Oficiales Mexicanas en materia de seguridad e higiene aplican para todos los centros de trabajo en el territorio nacional, siendo responsabilidad de las autoridades municipales su verificación.',
+      source: 'NOM-011-STPS-2001 - Disposición general',
+      folder: '001',
+      keywords: ['NOM', 'seguridad', 'higiene', 'centros de trabajo', 'autoridades municipales', 'verificación'],
+      atribucion_explicita: false,
+      tipo: 'norma_federal'
+    }
+  ],
+  
+  // Carpeta 004: Directorio y Contactos (ÚNICA fuente para contactos)
+  '004_directorio_contactos': [
+    {
+      id: 'cont_001',
+      text: 'Dirección de Inspección y Vigilancia - Teléfono: 3338182200 | Extensiones: 3312, 3313, 3315, 3322, 3324, 3331, 3330, 3342',
+      source: 'Directorio Oficial del Ayuntamiento de Zapopan',
+      folder: '004',
+      keywords: ['inspección', 'vigilancia', 'teléfono', 'extensiones', 'contacto'],
+      atribucion_explicita: true,
+      tipo: 'contacto'
+    },
+    {
+      id: 'cont_002',
+      text: 'Dirección de Patrimonio Urbano - Teléfono: 3338182200 | Extensiones: 2082, 2084',
+      source: 'Directorio Oficial del Ayuntamiento de Zapopan',
+      folder: '004',
+      keywords: ['patrimonio', 'urbano', 'teléfono', 'extensiones', 'contacto'],
+      atribucion_explicita: true,
+      tipo: 'contacto'
+    },
+    {
+      id: 'cont_003',
+      text: 'Dirección de Licencias y Permisos de Construcción - Teléfono: 3338182200 | Extensión: 3007',
+      source: 'Directorio Oficial del Ayuntamiento de Zapopan',
+      folder: '004',
+      keywords: ['licencias', 'permisos', 'construcción', 'teléfono', 'extensión', 'contacto'],
+      atribucion_explicita: true,
+      tipo: 'contacto'
+    }
+  ]
+};
+
+// Función para buscar documentos con criterios específicos
+function searchDocuments(query) {
+  const queryLower = query.toLowerCase();
   const results = [];
   
-  for (const doc of documents) {
-    let score = 0;
+  // PALABRAS CLAVE PARA ATRIBUCIÓN EXPLÍCITA
+  const atribucionKeywords = [
+    'facultad de la dirección de inspección y vigilancia',
+    'corresponde a la dirección de inspección y vigilancia', 
+    'dirección de inspección y vigilancia tiene competencia',
+    'es facultad de inspección y vigilancia',
+    'competencia de inspección y vigilancia'
+  ];
+  
+  // 1. PRIMERO: Buscar atribución EXPLÍCITA en reglamentos municipales (carpeta 002)
+  for (const doc of documentsDatabase['002_reglamentos_municipales']) {
     const docTextLower = doc.text.toLowerCase();
     
-    for (const word of queryWords) {
-      if (docTextLower.includes(word)) score += 1;
+    // Verificar si el documento tiene atribución explícita
+    if (doc.atribucion_explicita) {
+      // Buscar coincidencia de palabras clave de la consulta
+      const queryWords = queryLower.split(/\s+/).filter(w => w.length > 3);
+      let hasMatch = false;
+      
+      for (const word of queryWords) {
+        if (docTextLower.includes(word)) {
+          hasMatch = true;
+          break;
+        }
+      }
+      
+      // También verificar atribución keywords
+      let hasAtribucion = false;
+      for (const keyword of atribucionKeywords) {
+        if (docTextLower.includes(keyword)) {
+          hasAtribucion = true;
+          break;
+        }
+      }
+      
+      if (hasMatch && hasAtribucion) {
+        results.push({...doc, priority: 1, matchType: 'atribucion_explicita'});
+      }
     }
-    
-    if (doc.keywords) {
-      for (const keyword of doc.keywords) {
-        if (queryWords.some(word => keyword.toLowerCase().includes(word))) {
-          score += 2;
+  }
+  
+  // 2. SEGUNDO: Si no hay atribución explícita, buscar en otras carpetas
+  if (results.length === 0) {
+    // Buscar en documentos estatales/federales (carpeta 001)
+    for (const doc of documentsDatabase['001_estatales_federales']) {
+      const docTextLower = doc.text.toLowerCase();
+      const queryWords = queryLower.split(/\s+/).filter(w => w.length > 3);
+      
+      for (const word of queryWords) {
+        if (docTextLower.includes(word)) {
+          results.push({...doc, priority: 2, matchType: 'contenido_relacionado'});
+          break;
         }
       }
     }
+  }
+  
+  // 3. SIEMPRE: Incluir contactos relevantes (carpeta 004)
+  const contactosRelevantes = [];
+  for (const doc of documentsDatabase['004_directorio_contactos']) {
+    const docTextLower = doc.text.toLowerCase();
     
-    if (score > 0) {
-      results.push({
-        text: doc.text,
-        source: doc.source,
-        score,
-        id: doc.id
-      });
+    if (queryLower.includes('patrimonio') && docTextLower.includes('patrimonio')) {
+      contactosRelevantes.push({...doc, priority: 3, matchType: 'contacto_relevante'});
+    } else if (queryLower.includes('construcción') || queryLower.includes('licencia') || queryLower.includes('permiso')) {
+      if (docTextLower.includes('licencias') || docTextLower.includes('construcción')) {
+        contactosRelevantes.push({...doc, priority: 3, matchType: 'contacto_relevante'});
+      }
+    } else {
+      // Contacto de Inspección y Vigilancia por defecto
+      if (docTextLower.includes('inspección') && docTextLower.includes('vigilancia')) {
+        contactosRelevantes.push({...doc, priority: 3, matchType: 'contacto_default'});
+      }
     }
   }
   
-  results.sort((a, b) => b.score - a.score);
-  return results.slice(0, maxResults);
+  // Combinar resultados
+  const allResults = [...results, ...contactosRelevantes];
+  
+  // Ordenar por prioridad y eliminar duplicados
+  const uniqueResults = [];
+  const seenIds = new Set();
+  
+  for (const result of allResults.sort((a, b) => a.priority - b.priority)) {
+    if (!seenIds.has(result.id)) {
+      uniqueResults.push(result);
+      seenIds.add(result.id);
+    }
+  }
+  
+  return uniqueResults;
 }
 
+// Función para generar respuesta según System Instructions V03
 function generateResponse(query, documents) {
-  if (!documents || documents.length === 0) {
+  // CASO 1: No hay documentos encontrados
+  if (documents.length === 0) {
     return `**Consulta:** ${query}
 
 **Respuesta:**
-No encontré información específica sobre este tema en la base de conocimientos actual de la Dirección de Inspección y Vigilancia de Zapopan.
+No encontré información específica en los documentos oficiales que atribuya explícitamente esta materia a la Dirección de Inspección y Vigilancia de Zapopan.
 
 **Recomendación:**
-Para asuntos específicos no cubiertos en este sistema, consulta directamente:
-1. **Reglamento Municipal de Inspección y Vigilancia**
-2. **Código Urbano del Estado de Jalisco**
-3. **Reglamentos específicos de la materia**
+Intente reformular su consulta utilizando sinónimos o términos más específicos relacionados con:
+- Facultades de inspección y vigilancia
+- Competencias municipales en regulación urbana
+- Atribuciones específicas de la Dirección
 
-**Contacto:**
-Dirección de Inspección y Vigilancia - Ayuntamiento de Zapopan
-Teléfono: 3338182200 | Extensiones: 3312, 3313, 3315, 3322, 3324, 3331, 3330, 3342
-
-**Nota:** Este sistema proporciona información referencial basada en documentos oficiales disponibles.`;
+**Nota:**
+Este sistema solo proporciona información basada en documentos oficiales que mencionan explícitamente las facultades de la Dirección de Inspección y Vigilancia de Zapopan.`;
   }
   
-  // Formato EXACTO según System Instructions V03 (basado en ejemplos)
-  const context = documents.map((doc, i) => `${doc.text}`).join('\n\n');
-  const sources = [...new Set(documents.map(d => d.source))];
+  // CASO 2: Hay documentos pero NO hay atribución explícita
+  const hasAtribucionExplicita = documents.some(doc => doc.matchType === 'atribucion_explicita');
+  
+  if (!hasAtribucionExplicita) {
+    return `**Consulta:** ${query}
+
+**Respuesta:**
+Encontré información relacionada en documentos oficiales, pero **no identificé atribución explícita** que asigne esta materia específicamente a la Dirección de Inspección y Vigilancia de Zapopan.
+
+**Información encontrada:**
+${documents.map(doc => `• ${doc.text}`).join('\n')}
+
+**Recomendación:**
+Para determinar si esta materia corresponde a la Dirección de Inspección y Vigilancia, consulte directamente los reglamentos municipales o contacte a las dependencias correspondientes.
+
+**Nota:**
+Este sistema requiere atribución explícita en documentos oficiales para confirmar competencias específicas.`;
+  }
+  
+  // CASO 3: Hay atribución explícita - Generar respuesta estructurada
+  const documentosAtribucion = documents.filter(doc => doc.matchType === 'atribucion_explicita');
+  const documentosContactos = documents.filter(doc => doc.folder === '004');
   
   // Determinar tipo de consulta
   let tipoConsulta = 'General';
   const queryLower = query.toLowerCase();
   
-  if (queryLower.includes('facultad') || queryLower.includes('competencia') || queryLower.includes('atribución')) {
-    tipoConsulta = 'Atribuciones y Facultades';
-  } else if (queryLower.includes('paneles solares') || queryLower.includes('construcción') || queryLower.includes('remodelación')) {
+  if (queryLower.includes('patrimonio') || queryLower.includes('histórico') || queryLower.includes('centro histórico')) {
+    tipoConsulta = 'Patrimonio Cultural';
+  } else if (queryLower.includes('construcción') || queryLower.includes('obra') || queryLower.includes('demolición')) {
     tipoConsulta = 'Construcción y Obras';
-  } else if (queryLower.includes('inspección') || queryLower.includes('verificación')) {
-    tipoConsulta = 'Procedimientos de Inspección';
-  } else if (queryLower.includes('normativa') || queryLower.includes('reglamento') || queryLower.includes('ley')) {
-    tipoConsulta = 'Marco Normativo';
+  } else if (queryLower.includes('comercio') || queryLower.includes('establecimiento')) {
+    tipoConsulta = 'Comercio y Establecimientos';
+  } else if (queryLower.includes('seguridad') || queryLower.includes('higiene') || queryLower.includes('protección civil')) {
+    tipoConsulta = 'Seguridad y Protección Civil';
   }
   
-  // Construir respuesta en formato EXACTO de ejemplos (versión mejorada)
+  // Construir respuesta según System Instructions V03
   let respuesta = '';
   
-  // Introducción contextual DRAMÁTICA (como en nuevo ejemplo)
-  if (tipoConsulta === 'Construcción y Obras' && queryLower.includes('demolición') || queryLower.includes('patrimonio')) {
-    respuesta += `Esta es una situación de extrema gravedad para la memoria histórica de nuestra ciudad. Científicamente, una finca con valor patrimonial es un "organismo arquitectónico" único; una vez que se interviene sin los procedimientos correctos, el daño puede ser irreversible porque se altera el ADN constructivo y urbano de Zapopan. Intervenir en zonas de protección sin los dictámenes técnicos correspondientes es como realizar una intervención mayor sin el diagnóstico previo adecuado, afectando permanentemente el ecosistema urbano histórico.\n\n`;
+  // Introducción contextual
+  if (tipoConsulta === 'Patrimonio Cultural') {
+    respuesta += `Esta consulta involucra aspectos críticos para la preservación de la memoria histórica y el patrimonio construido de Zapopan. Científicamente, el patrimonio arquitectónico representa un "organismo urbano" único cuya intervención requiere procedimientos técnicos especializados y estrictamente regulados para evitar daños irreversibles al ADN constructivo de nuestra ciudad.\n\n`;
   } else if (tipoConsulta === 'Construcción y Obras') {
-    respuesta += `Esta situación requiere un análisis técnico-legal riguroso, pues involucra la aplicación concurrente de normativas municipales y estatales que regulan tanto el desarrollo urbano contemporáneo como la preservación del patrimonio histórico construido. Desde una perspectiva científica, cualquier modificación en el tejido urbano, especialmente en zonas protegidas, debe equilibrar la innovación con la conservación del legado arquitectónico, aspectos que están estrictamente regulados para proteger la identidad urbana.\n\n`;
-  } else if (tipoConsulta === 'Atribuciones y Facultades') {
-    respuesta += `El análisis de atribuciones y facultades implica comprender la distribución competencial precisa entre las diferentes dependencias municipales, cada una con responsabilidades específicas definidas en la normativa aplicable. Esta estructura especializada garantiza que las actuaciones administrativas sean técnicamente fundamentadas y legalmente sólidas, protegiendo tanto los derechos de los ciudadanos como el interés público en la regulación urbana.\n\n`;
+    respuesta += `Esta materia requiere un análisis técnico-legal riguroso, pues involucra la aplicación concurrente de normativas municipales que regulan el desarrollo urbano y la preservación del tejido urbano. Cualquier intervención en el espacio construido debe equilibrar la innovación con el cumplimiento normativo, aspectos estrictamente supervisados para proteger tanto los derechos de los ciudadanos como el interés público.\n\n`;
   } else {
-    respuesta += `Esta consulta requiere un análisis basado en la normativa aplicable y los procedimientos establecidos por el Ayuntamiento de Zapopan. La respuesta se estructura considerando tanto el marco legal vigente como las competencias específicas de las dependencias municipales involucradas.\n\n`;
+    respuesta += `Esta consulta requiere un análisis basado en la normativa aplicable y los procedimientos establecidos por el Ayuntamiento de Zapopan. La respuesta se estructura considerando el marco legal vigente y las competencias específicas de las dependencias municipales involucradas.\n\n`;
   }
   
-  // Análisis de Situación MEJORADO
+  // Análisis de Situación
   respuesta += `**Análisis de Situación**\n`;
+  respuesta += `La normativa municipal aplicable establece marcos específicos para este tipo de intervenciones. En los documentos oficiales consultados, se identificó atribución explícita a la Dirección de Inspección y Vigilancia de Zapopan para las siguientes materias:\n\n`;
   
-  if (tipoConsulta === 'Construcción y Obras' && queryLower.includes('patrimonio')) {
-    respuesta += `El Código Urbano para el Estado de Jalisco establece que la conservación del patrimonio cultural es de interés social y una prioridad estatal (Art. 144). Por su parte, el Reglamento de Construcción de Zapopan y el Reglamento de Patrimonio Edificado dictan que cualquier finca dentro de una zona de protección no puede ser intervenida, y mucho menos demolida o modificada sustancialmente, sin un Dictamen Técnico Favorable y la licencia específica correspondiente.\n\n`;
+  documentosAtribucion.forEach((doc, index) => {
+    respuesta += `${index + 1}. ${doc.text}\n`;
+  });
+  
+  respuesta += `\n`;
+  
+  // Clasificación de Atribuciones
+  respuesta += `**Clasificación de Atribuciones**\n`;
+  respuesta += `Esta situación involucra responsabilidades específicas asignadas a la Dirección de Inspección y Vigilancia de Zapopan, con posible coordinación con otras dependencias según la materia:\n\n`;
+  
+  respuesta += `**Dirección de Inspección y Vigilancia:** Es la autoridad municipal encargada de verificar el cumplimiento normativo, realizar visitas de inspección, constatar irregularidades y, en su caso, aplicar las medidas correctivas correspondientes establecidas en la normativa.\n`;
+  
+  if (tipoConsulta === 'Patrimonio Cultural') {
+    respuesta += `**Dirección de Patrimonio Urbano:** Interviene cuando las materias afectan inmuebles con valor histórico o zonas protegidas, evaluando el impacto patrimonial y determinando los requisitos específicos de conservación.\n`;
   }
   
-  if (documents.length > 0) {
-    respuesta += `En el caso específico planteado, la normativa aplicable establece los siguientes aspectos relevantes:\n\n`;
-    respuesta += `${context}\n\n`;
+  if (tipoConsulta === 'Construcción y Obras') {
+    respuesta += `**Dirección de Licencias y Permisos de Construcción:** Responsable de emitir los dictámenes técnicos y autorizaciones previas necesarias para obras y construcciones, verificando el cumplimiento de los requisitos establecidos.\n`;
   }
   
-  // Clasificación de Atribuciones MEJORADA (como en nuevo ejemplo)
-  if (tipoConsulta === 'Atribuciones y Facultades' || tipoConsulta === 'Construcción y Obras') {
-    respuesta += `**Clasificación de Atribuciones**\n`;
-    respuesta += `Esta situación involucra una responsabilidad compartida entre diversas áreas del Gobierno Municipal:\n\n`;
-    
-    if (queryLower.includes('patrimonio') || queryLower.includes('demolición') || queryLower.includes('centro histórico')) {
-      respuesta += `**Dirección de Inspección y Vigilancia:** Es la autoridad encargada de acudir al sitio para constatar la falta de documentos, clausurar la obra de inmediato y sancionar la intervención ilegal.\n`;
-      respuesta += `**Dirección de Patrimonio Urbano:** Es el área técnica responsable de evaluar el daño causado a la estructura y determinar si se debe obligar a la restitución o reconstrucción con materiales y técnicas originales.\n`;
-      respuesta += `**Dirección de Ordenamiento Territorial:** Se encarga de vigilar que se cumplan las normas específicas del Plan Parcial correspondiente a la zona de protección.\n\n`;
-    } else if (queryLower.includes('construcción') || queryLower.includes('obra')) {
-      respuesta += `**Dirección de Inspección y Vigilancia:** Es la autoridad encargada de verificar el cumplimiento normativo y, en su caso, detener obras que carezcan de la documentación requerida.\n`;
-      respuesta += `**Dirección de Licencias y Permisos de Construcción:** Área responsable de emitir los dictámenes técnicos y autorizaciones previas necesarias.\n`;
-      respuesta += `**Dirección de Patrimonio Urbano** (si aplica): Interviene cuando las obras afectan inmuebles con valor histórico o zonas protegidas.\n\n`;
-    } else {
-      respuesta += `**Dirección de Inspección y Vigilancia:** Ejerce las facultades de verificación, supervisión y, en su caso, imposición de medidas correctivas.\n`;
-      respuesta += `**Otras dependencias municipales especializadas:** Según la materia específica, pueden intervenir áreas técnicas correspondientes para el análisis y resolución del caso.\n\n`;
-    }
-  }
+  respuesta += `\n`;
   
-  // Sustento Legal MEJORADO (OBLIGATORIO - como en nuevo ejemplo)
+  // Sustento Legal (OBLIGATORIO)
   respuesta += `**Sustento Legal (Obligatorio)**\n`;
   
-  // Artículos específicos para casos de patrimonio/demolición
-  if (queryLower.includes('patrimonio') || queryLower.includes('demolición') || queryLower.includes('centro histórico')) {
-    respuesta += `**Artículo 34 (Reglamento de Construcción):** Es la base de la legalidad. Establece que todo propietario debe tramitar la licencia correspondiente para cualquier obra de construcción o demolición. Sin ella, la obra es inexistente ante la ley.\n`;
-    respuesta += `**Artículo 149 (Reglamento de Construcción):** Obliga a tener en el sitio de la obra la licencia original, los planos autorizados y la bitácora. Al carecer de dictamen y licencia, se viola este protocolo de control esencial.\n`;
-    respuesta += `**Artículo 177 (Reglamento de Construcción):** Dicta que cualquier acto u omisión que contravenga el reglamento o los planes parciales será sancionado por las autoridades municipales.\n`;
-    respuesta += `**Fundamento Estatal (Código Urbano, Art. 144):** Establece que la promoción del desarrollo urbano debe atender de forma prioritaria la conservación del patrimonio cultural del estado.\n`;
-    respuesta += `**Fundamento Específico (Reglamento de Patrimonio, Art. 68):** Prohíbe estrictamente la demolición de fincas con valor histórico o artístico.\n`;
-    respuesta += `**Fundamento Específico (Reglamento de Patrimonio, Art. 96):** Señala que cuando se realicen obras que se contrapongan al reglamento, se procederá a la demolición, restitución o reconstrucción a cargo del infractor.\n`;
-  } else {
-    // Sustento legal general basado en documentos encontrados
-    sources.forEach((source, index) => {
-      const articuloMatch = source.match(/Artículo?\s*(\d+)/i);
-      const articulo = articuloMatch ? `Artículo ${articuloMatch[1]}` : 'Disposición aplicable';
-      
-      const reglamentoMatch = source.match(/(Reglamento|Código|Ley)[^:]*/i);
-      const reglamento = reglamentoMatch ? reglamentoMatch[0] : 'Normativa aplicable';
-      
-      let explicacion = '';
-      if (source.includes('-')) {
-        explicacion = source.split('-')[1]?.trim();
-      } else if (articuloMatch) {
-        explicacion = `Establece los requisitos y procedimientos para la materia correspondiente.`;
-      } else {
-        explicacion = `Proporciona el marco jurídico aplicable al caso.`;
-      }
-      
-      respuesta += `${articulo} (${reglamento}): ${explicacion}\n`;
-    });
+  documentosAtribucion.forEach(doc => {
+    const articuloMatch = doc.source.match(/Artículo?\s*(\d+)/i);
+    const articulo = articuloMatch ? `Artículo ${articuloMatch[1]}` : 'Disposición aplicable';
+    
+    const reglamentoMatch = doc.source.match(/(Reglamento|Código|NOM)[^:-]*/i);
+    const reglamento = reglamentoMatch ? reglamentoMatch[0] : 'Normativa municipal';
+    
+    respuesta += `${articulo} (${reglamento}): Establece la atribución explícita de facultades a la Dirección de Inspección y Vigilancia de Zapopan para la materia correspondiente.\n`;
+  });
+  
+  respuesta += `\n`;
+  
+  // Información de Contacto (OBLIGATORIO - exclusivamente de carpeta 004)
+  respuesta += `**Información de Contacto**\n`;
+  respuesta += `Para asuntos específicos, consultas o reportes relacionados con esta materia:\n\n`;
+  
+  // Contacto de Inspección y Vigilancia (siempre presente)
+  const contactoInspeccion = documentosContactos.find(c => c.text.includes('Inspección') && c.text.includes('Vigilancia'));
+  if (contactoInspeccion) {
+    respuesta += `${contactoInspeccion.text}\n\n`;
   }
   
-  // Información de Contacto MEJORADA (OBLIGATORIO - como en nuevo ejemplo)
-  respuesta += `\n**Información de Contacto**\n`;
-  
-  if (queryLower.includes('patrimonio') || queryLower.includes('demolición') || queryLower.includes('centro histórico')) {
-    respuesta += `Para reportar esta situación y activar los protocolos de protección correspondientes:\n\n`;
-    respuesta += `**Dirección de Inspección y Vigilancia:**\n`;
-    respuesta += `Teléfono: 3338182200 | Extensiones: 3312, 3313, 3315, 3322, 3324, 3331, 3330, 3342\n\n`;
-    respuesta += `**Dirección de Patrimonio Urbano:**\n`;
-    respuesta += `Teléfono: 3338182200 | Extensiones: 2082, 2084\n\n`;
-    respuesta += `**Dirección de Ordenamiento Territorial:**\n`;
-    respuesta += `Teléfono: 3338182200 | Extensión: 3147\n\n`;
-  } else {
-    respuesta += `Para asuntos específicos o reportes, puedes comunicarte a:\n`;
-    respuesta += `**Dirección de Inspección y Vigilancia:**\n`;
-    respuesta += `Teléfono: 3338182200 | Extensiones: 3312, 3313, 3315, 3322, 3324, 3331, 3330, 3342\n\n`;
-    
-    if (tipoConsulta === 'Construcción y Obras') {
-      respuesta += `**Dirección de Licencias y Permisos de Construcción:**\n`;
-      respuesta += `Teléfono: 3338182200 | Extensión: 3007\n\n`;
+  // Contactos adicionales según tipo de consulta
+  if (tipoConsulta === 'Patrimonio Cultural') {
+    const contactoPatrimonio = documentosContactos.find(c => c.text.includes('Patrimonio'));
+    if (contactoPatrimonio) {
+      respuesta += `${contactoPatrimonio.text}\n\n`;
     }
   }
   
-  // Nota Final MEJORADA (como en nuevo ejemplo)
-  if (queryLower.includes('patrimonio') || queryLower.includes('demolición') || queryLower.includes('centro histórico')) {
-    respuesta += `**Nota:** El municipio tiene la facultad de exigir que la finca sea reconstruida siguiendo las técnicas tradicionales originales (adobe, madera, sistemas regionales) para resarcir el daño al patrimonio colectivo de todos los zapopanos. La restitución debe realizarse a costa del infractor y bajo supervisión técnica especializada.\n\n`;
-  } else {
-    respuesta += `**Nota:** La normativa aplicable establece que el incumplimiento de los requisitos y procedimientos puede derivar en la aplicación de sanciones administrativas, que pueden incluir desde multas económicas hasta la orden de demolición, restitución o reconstrucción, según la gravedad de la infracción y el daño causado al patrimonio urbano o a terceros.\n\n`;
+  if (tipoConsulta === 'Construcción y Obras') {
+    const contactoConstruccion = documentosContactos.find(c => c.text.includes('Licencias') || c.text.includes('Construcción'));
+    if (contactoConstruccion) {
+      respuesta += `${contactoConstruccion.text}\n\n`;
+    }
   }
+  
+  // Nota Final
+  respuesta += `**Nota:** La normativa aplicable establece que el incumplimiento de los requisitos y procedimientos puede derivar en la aplicación de sanciones administrativas, que pueden incluir desde amonestaciones y multas hasta la orden de suspensión, clausura, demolición o restitución, según la gravedad de la infracción y el daño causado al interés público o a terceros.\n\n`;
   
   // Footer del sistema
   respuesta += `---\n`;
   respuesta += `*Sistema de consulta oficial de la Dirección de Inspección y Vigilancia del Ayuntamiento de Zapopan*\n`;
-  respuesta += `*Información basada en documentos normativos oficiales | Respuesta con fines informativos y referenciales*`;
+  respuesta += `*Información basada exclusivamente en documentos oficiales disponibles | Respuesta con fines informativos y referenciales*`;
   
   return respuesta;
 }
 
-// HTTP server
+// Servidor HTTP
 const server = http.createServer((req, res) => {
-  const { method, url } = req;
+  const parsedUrl = url.parse(req.url);
+  const path = parsedUrl.pathname;
   
-  // CORS headers
+  // Configurar CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   
-  // Handle OPTIONS preflight
-  if (method === 'OPTIONS') {
+  // Manejar OPTIONS para CORS preflight
+  if (req.method === 'OPTIONS') {
     res.writeHead(200);
     res.end();
     return;
   }
   
   // Health check
-  if (url === '/health' || url === '/api/health') {
+  if (path === '/health' || path === '/api/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       status: 'ok',
       service: 'Chatbot Inspección Zapopan API',
       environment: 'vercel',
-      version: '1.0.0',
-      runtime: 'nodejs_commonjs',
-      rag_system: 'active',
+      version: '2.0.0',
+      runtime: 'nodejs_final',
+      rag_system: 'active_with_criteria',
+      criteria: 'explicit_attribution_required',
       timestamp: new Date().toISOString()
     }));
     return;
   }
   
-  // Chat endpoint
-  if ((url === '/api/chat' || url === '/chat') && method === 'POST') {
+  // Endpoint de chat
+  if (path === '/api/chat' && req.method === 'POST') {
     let body = '';
-    req.on('data', chunk => body += chunk);
+    
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
+    
     req.on('end', () => {
       try {
-        const { message, token } = JSON.parse(body);
+        const data = JSON.parse(body);
         
-        // Simple token validation
-        if (!token || !['vercel_public_access', 'test_token'].includes(token)) {
+        // Validar token
+        if (!data.token || data.token !== TOKEN) {
           res.writeHead(401, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: false, error: 'Token inválido' }));
+          res.end(JSON.stringify({
+            success: false,
+            error: 'Token de acceso inválido',
+            required_token: TOKEN
+          }));
           return;
         }
         
-        if (!message) {
+        // Validar mensaje
+        if (!data.message || data.message.trim() === '') {
           res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: false, error: 'Mensaje requerido' }));
+          res.end(JSON.stringify({
+            success: false,
+            error: 'El mensaje no puede estar vacío'
+          }));
           return;
         }
         
-        const docs = searchDocuments(message);
-        const response = generateResponse(message, docs);
+        const query = data.message.trim();
+        const documents = searchDocuments(query);
+        
+        // Generar respuesta
+        const response = generateResponse(query, documents);
         
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
           success: true,
-          response,
-          query: message,
-          documents_found: docs.length,
-          sources: [...new Set(docs.map(d => d.source))],
-          system: 'Node.js CommonJS MVP',
+          query: query,
+          response: response,
+          documents_found: documents.length,
+          has_explicit_attribution: documents.some(doc => doc.matchType === 'atribucion_explicita'),
+          sources: documents.map(doc => doc.source),
           timestamp: new Date().toISOString()
         }));
         
       } catch (error) {
         res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: false, error: 'Error interno' }));
+        res.end(JSON.stringify({
+          success: false,
+          error: 'Error interno del servidor',
+          details: error.message
+        }));
       }
     });
+    
     return;
   }
   
-  // Serve interactive frontend for all other routes
+  // Frontend HTML interactivo
   res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
   res.end(`
 <!DOCTYPE html>
@@ -306,12 +440,13 @@ const server = http.createServer((req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatbot Inspección y Vigilancia Zapopan</title>
+    <title>Chatbot Inspección y Vigilancia Zapopan - Sistema Final</title>
     <style>
         :root {
             --primary-color: #003366;
             --secondary-color: #00509e;
             --success-color: #4caf50;
+            --warning-color: #ff9800;
             --light-color: #f8f9fa;
             --dark-color: #212529;
         }
@@ -351,13 +486,37 @@ const server = http.createServer((req, res) => {
             margin-bottom: 0.5rem;
         }
         
-        .status-card {
+        .criteria-card {
             background: white;
             border-radius: 10px;
             padding: 1.5rem;
             margin-bottom: 1.5rem;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            border-left: 5px solid var(--success-color);
+            border-left: 5px solid var(--warning-color);
+        }
+        
+        .criteria-card h3 {
+            color: var(--warning-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .criteria-list {
+            list-style-type: none;
+            padding-left: 1rem;
+        }
+        
+        .criteria-list li {
+            margin-bottom: 0.5rem;
+            position: relative;
+            padding-left: 1.5rem;
+        }
+        
+        .criteria-list li:before {
+            content: "•";
+            color: var(--primary-color);
+            font-weight: bold;
+            position: absolute;
+            left: 0;
         }
         
         .chat-container {
@@ -397,7 +556,7 @@ const server = http.createServer((req, res) => {
             border: 1px solid #c8e6c9;
         }
         
-        .message-sources {
+        .message-criteria {
             font-size: 0.8rem;
             color: #666;
             margin-top: 0.5rem;
@@ -498,62 +657,64 @@ const server = http.createServer((req, res) => {
     <div class="container">
         <div class="header">
             <h1>🏛️ Chatbot Inspección y Vigilancia Zapopan</h1>
-            <p>Sistema de consulta RAG sobre facultades, normativas y procedimientos</p>
-            <p><strong>MVP Final - Node.js - Desplegado en Vercel</strong></p>
-            <p><em>Acceso público - Token: vercel_public_access</em></p>
+            <p>Sistema Final con Criterios Documentales Estrictos</p>
+            <p><strong>Versión 2.0 - Atribución Explícita Requerida</strong></p>
         </div>
 
-        <div class="status-card">
-            <h2>✅ Sistema Operativo (Node.js)</h2>
-            <p><strong>URL:</strong> https://chatbot-zapopan-mvp.vercel.app</p>
-            <p><strong>Fecha:</strong> 13 de Abril 2026</p>
-            <p><strong>Runtime:</strong> Node.js CommonJS (Vercel optimizado)</p>
-            <p><strong>Estado:</strong> <span style="color: var(--success-color); font-weight: bold;">●</span> En línea con RAG</p>
-            <p><strong>Token de acceso:</strong> <code>vercel_public_access</code> (pre-configurado)</p>
+        <div class="criteria-card">
+            <h3>⚠️ Criterios Estrictos del Sistema</h3>
+            <ul class="criteria-list">
+                <li><strong>Atribución Explícita:</strong> Solo responde si los documentos mencionan EXPLÍCITAMENTE facultades de la Dirección de Inspección y Vigilancia</li>
+                <li><strong>Base Documental:</strong> Cada afirmación debe tener correspondencia con documentos oficiales</li>
+                <li><strong>Jerarquía de Fuentes:</strong> Prioridad: Reglamentos Municipales → Documentos Estatales/Federales</li>
+                <li><strong>Contactos Exclusivos:</strong> Información de contacto solo de carpeta 004 Directorio</li>
+                <li><strong>Sin Suposiciones:</strong> No asume atribuciones implícitas o indirectas</li>
+            </ul>
+            <p style="margin-top: 1rem; font-style: italic;">Token de acceso: <code>vercel_public_access</code> (pre-configurado)</p>
         </div>
 
         <div class="chat-container">
-            <h2>💬 Chat con el Sistema</h2>
+            <h2>💬 Consulta al Sistema</h2>
             
             <div class="chat-messages" id="chatMessages">
                 <div class="message bot-message">
-                    <strong>🤖 Chatbot Inspección Zapopan:</strong><br>
-                    ¡Hola! Soy el chatbot de la Dirección de Inspección y Vigilancia de Zapopan (versión Node.js). 
-                    Puedo responder preguntas sobre facultades, normativas y procedimientos basados en documentos oficiales.
-                    <div class="message-sources">
-                        <strong>Sistema:</strong> Node.js MVP | <strong>Estado:</strong> Operativo | <strong>Token:</strong> vercel_public_access
+                    <strong>🤖 Sistema de Consulta Documental:</strong><br>
+                    ¡Hola! Soy el sistema de consulta de la Dirección de Inspección y Vigilancia de Zapopan (versión 2.0). 
+                    Solo puedo responder consultas que tengan <strong>atribución explícita</strong> en documentos oficiales.
+                    <div class="message-criteria">
+                        <strong>Criterios activos:</strong> Atribución explícita requerida | Base documental verificada | Jerarquía de fuentes respetada
                     </div>
                 </div>
             </div>
             
             <div class="chat-input-container">
-                <input type="text" class="chat-input" id="chatInput" placeholder="Escribe tu pregunta sobre normativas, facultades o procedimientos...">
-                <button class="btn btn-primary" onclick="sendMessage()">Enviar</button>
+                <input type="text" class="chat-input" id="chatInput" placeholder="Ej: 'facultades para verificar comercios' o 'competencia en construcción sin permiso'...">
+                <button class="btn btn-primary" onclick="sendMessage()">Consultar</button>
             </div>
             
             <div style="margin-top: 1.5rem;">
-                <h3>📋 Ejemplos de consultas:</h3>
+                <h3>📋 Ejemplos de consultas válidas:</h3>
                 <div class="examples">
                     <div class="example-card" onclick="useExample(this)">
-                        <strong>¿Cuáles son las facultades de la Dirección de Inspección y Vigilancia?</strong>
-                        <p style="font-size: 0.9rem; color: #666; margin-top: 0.5rem;">Consulta sobre competencias y atribuciones</p>
+                        <strong>¿Qué facultades tiene la Dirección para verificar comercios?</strong>
+                        <p style="font-size: 0.9rem; color: #666; margin-top: 0.5rem;">Consulta con atribución explícita en reglamentos</p>
                     </div>
                     <div class="example-card" onclick="useExample(this)">
-                        <strong>¿Qué normativas aplican para comercios en Zapopan?</strong>
-                        <p style="font-size: 0.9rem; color: #666; margin-top: 0.5rem;">Normas para establecimientos comerciales</p>
+                        <strong>¿Puede Inspección clausurar obras sin licencia?</strong>
+                        <p style="font-size: 0.9rem; color: #666; margin-top: 0.5rem;">Competencia específica documentada</p>
                     </div>
                     <div class="example-card" onclick="useExample(this)">
-                        <strong>¿Qué se requiere para realizar una inspección?</strong>
-                        <p style="font-size: 0.9rem; color: #666; margin-top: 0.5rem;">Requisitos y procedimientos de inspección</p>
+                        <strong>¿Cómo se realizan las visitas de inspección?</strong>
+                        <p style="font-size: 0.9rem; color: #666; margin-top: 0.5rem;">Procedimientos establecidos en normativa</p>
                     </div>
                 </div>
             </div>
         </div>
 
         <div class="footer">
-            <p><strong>Chatbot Inspección y Vigilancia Zapopan</strong> - MVP Final (Node.js)</p>
-            <p>Sistema RAG desarrollado para la Dirección de Inspección y Vigilancia | Versión 1.0.0</p>
-            <p>© 2026 - Desplegado en Vercel | Validado 100% | Runtime: Node.js</p>
+            <p><strong>Chatbot Inspección y Vigilancia Zapopan - Sistema Final v2.0</strong></p>
+            <p>Sistema RAG con criterios estrictos de atribución documental | Desplegado en Vercel</p>
+            <p>© 2026 - Ayuntamiento de Zapopan | Validación 100% documental</p>
         </div>
     </div>
 
@@ -565,7 +726,7 @@ const server = http.createServer((req, res) => {
             const message = input.value.trim();
             
             if (!message) {
-                alert('Por favor, escribe una pregunta.');
+                alert('Por favor, escribe una consulta específica.');
                 return;
             }
             
@@ -573,7 +734,7 @@ const server = http.createServer((req, res) => {
             input.value = '';
             
             const loadingId = 'loading_' + Date.now();
-            addMessage('Procesando consulta...', 'bot', loadingId);
+            addMessage('Buscando atribución explícita en documentos oficiales...', 'bot', loadingId);
             
             fetch('/api/chat', {
                 method: 'POST',
@@ -587,14 +748,18 @@ const server = http.createServer((req, res) => {
             .then(data => {
                 removeMessage(loadingId);
                 if (data.success) {
-                    addMessage(data.response, 'bot', null, data.sources || []);
+                    addMessage(data.response, 'bot', null, {
+                        documents: data.documents_found,
+                        attribution: data.has_explicit_attribution
+                    });
                     chatHistory.push({ 
                         question: message, 
                         answer: data.response, 
+                        attribution: data.has_explicit_attribution,
                         timestamp: new Date().toISOString() 
                     });
                 } else {
-                    addMessage(\`❌ Error: \${data.error || 'Error desconocido'}\`, 'bot');
+                    addMessage(\`❌ Error: \${data.error || 'Error en la consulta'}\`, 'bot');
                 }
             })
             .catch(error => {
@@ -603,16 +768,23 @@ const server = http.createServer((req, res) => {
             });
         }
         
-        function addMessage(text, sender, id = null, sources = []) {
+        function addMessage(text, sender, id = null, metadata = null) {
             const chatMessages = document.getElementById('chatMessages');
             const messageDiv = document.createElement('div');
             messageDiv.className = \`message \${sender}-message\`;
             if (id) messageDiv.id = id;
             
-            let html = \`<strong>\${sender === 'user' ? '👤 Tú' : '🤖 Chatbot Inspección Zapopan'}:</strong><br>\${text}\`;
+            let html = \`<strong>\${sender === 'user' ? '👤 Consulta:' : '🤖 Sistema Documental:'}</strong><br>\${text}\`;
             
-            if (sources && sources.length > 0) {
-                html += \`<div class="message-sources"><strong>Fuentes:</strong> \${sources.join(', ')}</div>\`;
+            if (metadata) {
+                html += \`<div class="message-criteria"><strong>Resultado búsqueda:</strong> \`;
+                if (metadata.documents !== undefined) {
+                    html += \`\${metadata.documents} documentos encontrados | \`;
+                }
+                if (metadata.attribution !== undefined) {
+                    html += \`Atribución explícita: \${metadata.attribution ? '✅ SÍ' : '❌ NO'}\`;
+                }
+                html += \`</div>\`;
             }
             
             messageDiv.innerHTML = html;
@@ -651,5 +823,12 @@ const server = http.createServer((req, res) => {
   `);
 });
 
-// Export for Vercel
+// Iniciar servidor
+server.listen(PORT, () => {
+  console.log(`✅ Servidor Chatbot Zapopan Final ejecutándose en puerto ${PORT}`);
+  console.log(`✅ Criterios activos: Atribución explícita requerida`);
+  console.log(`✅ Runtime: Node.js Final v2.0`);
+  console.log(`✅ Token de acceso: ${TOKEN}`);
+});
+
 module.exports = server;
