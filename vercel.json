@@ -3,13 +3,18 @@
   "builds": [
     {
       "src": "api/vercel.js",
-      "use": "@vercel/node",
-      "config": {
-        "maxDuration": 10
-      }
+      "use": "@vercel/node"
     }
   ],
   "routes": [
+    {
+      "src": "/health",
+      "dest": "/api/vercel.js"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/vercel.js"
+    },
     {
       "src": "/(.*)",
       "dest": "/api/vercel.js"
