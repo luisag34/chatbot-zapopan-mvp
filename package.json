@@ -1,18 +1,13 @@
 {
   "name": "chatbot-zapopan-mvp",
-  "version": "4.0.0",
-  "description": "Chatbot de Inspección y Vigilancia Zapopan con sistema RAG real",
+  "version": "3.2.0",
+  "description": "Chatbot de Inspección y Vigilancia Zapopan - Sistema RAG Real",
   "main": "api/index.js",
   "scripts": {
-    "start": "node api/index.js",
-    "dev": "node api/index.js",
-    "test": "echo \"No tests specified\" && exit 0"
+    "start": "node api/index.js"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18.x"
   },
-  "keywords": ["chatbot", "rag", "zapopan", "inspeccion", "vigilancia"],
-  "author": "Luis Aguirre",
-  "license": "MIT",
   "dependencies": {}
 }
