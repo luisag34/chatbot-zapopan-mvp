@@ -1,437 +1,215 @@
 const http = require('http');
 const url = require('url');
+const path = require('path');
+const fs = require('fs');
 
 // CONFIGURACIÓN
 const PORT = process.env.PORT || 3000;
 const TOKEN = 'vercel_public_access';
 
-// BASE DE CONOCIMIENTO (documentos reales simulados)
-const ATRIBUCIONES_EXPLICITAS = [
-  {
-    frase: "es facultad de la Dirección de Inspección y Vigilancia",
-    articulo: "Artículo 15",
-    reglamento: "Reglamento Municipal de Inspección y Vigilancia",
-    contexto: "verificar cumplimiento de normativas municipales en comercio, construcción, seguridad, uso de suelo y protección civil",
-    categorias: ["general", "comercio", "construccion", "seguridad"]
-  },
-  {
-    frase: "corresponde a la Dirección de Inspección y Vigilancia",
-    articulo: "Artículo 22", 
-    reglamento: "Reglamento Municipal de Inspección y Vigilancia",
-    contexto: "realizar visitas de inspección programadas o por denuncia ciudadana",
-    categorias: ["general", "inspeccion"]
-  },
-  {
-    frase: "la Dirección de Inspección y Vigilancia tiene competencia",
-    articulo: "Artículo 34",
-    reglamento: "Reglamento de Construcción Municipal",
-    contexto: "clausurar obras sin licencia, dictamen técnico o autorización en zonas protegidas",
-    categorias: ["construccion", "clausura"]
-  },
-  {
-    frase: "facultad de la Dirección de Inspección y Vigilancia para revisar permisos de construcción",
-    articulo: "Artículo 28",
-    reglamento: "Reglamento de Construcción Municipal (Carpeta 003)",
-    contexto: "revisar y verificar que las obras cuenten con los permisos de construcción correspondientes",
-    categorias: ["construccion", "permisos", "verificacion"]
-  },
-  {
-    frase: "es competencia de la Dirección de Inspección y Vigilancia verificar obras",
-    articulo: "Artículo 31",
-    reglamento: "Reglamento de Control de Obras Municipales",
-    contexto: "verificar que las obras se realicen conforme a los planos autorizados y permisos otorgados",
-    categorias: ["construccion", "verificacion", "obras"]
-  }
-];
+// CARGAR FUNCIONES RAG REAL
+const { buscarAtribucionesEnDocumentos, obtenerContactosRelevantes } = require('./rag_functions');
 
-const CONTACTOS = [
-  {
-    dependencia: "Dirección de Inspección y Vigilancia",
-    telefono: "3338182200",
-    extensiones: ["3312", "3313", "3315", "3322", "3324", "3331", "3330", "3342"],
-    tipo: "inspeccion"
-  },
-  {
-    dependencia: "Dirección de Patrimonio Urbano",
-    telefono: "3338182200",
-    extensiones: ["2082", "2084"],
-    tipo: "patrimonio"
-  },
-  {
-    dependencia: "Dirección de Licencias y Permisos de Construcción",
-    telefono: "3338182200",
-    extensiones: ["3007"],
-    tipo: "construccion"
-  },
-  {
-    dependencia: "Centro Público de Mediación Zona Centro",
-    telefono: "3331234567",
-    extensiones: ["1001", "1002"],
-    tipo: "mediacion",
-    zona: "Centro"
-  },
-  {
-    dependencia: "Centro Público de Mediación Zona Norte",
-    telefono: "3331234568", 
-    extensiones: ["2001", "2002"],
-    tipo: "mediacion",
-    zona: "Norte"
-  },
-  {
-    dependencia: "Centro Público de Mediación Zona Sur",
-    telefono: "3331234569",
-    extensiones: ["3001", "3002"],
-    tipo: "mediacion",
-    zona: "Sur"
-  },
-  {
-    dependencia: "Centro Público de Mediación Zona Oriente",
-    telefono: "3331234570",
-    extensiones: ["4001", "4002"],
-    tipo: "mediacion",
-    zona: "Oriente"
-  }
-];
-
-// FUNCIÓN PRINCIPAL: Buscar atribución explícita
-function buscarAtribucion(query) {
-  const queryLower = query.toLowerCase();
-  
-  // Determinar tipo de consulta
-  const esRuidoVecinos = (queryLower.includes('ruido') || queryLower.includes('molestia')) && 
-                        (queryLower.includes('vecino') || queryLower.includes('vecinos') || queryLower.includes('residencial'));
-  const esRuidoComercial = (queryLower.includes('ruido') || queryLower.includes('sonido')) && 
-                          (queryLower.includes('comercio') || queryLower.includes('negocio') || queryLower.includes('industrial') || queryLower.includes('evento'));
-  const esConstruccion = queryLower.includes('construcción') || queryLower.includes('obra') || queryLower.includes('permiso') || 
-                        queryLower.includes('clausurar') || queryLower.includes('edificación');
-  
-  // Si es ruido de vecinos, NO buscar atribución de Inspección
-  if (esRuidoVecinos) {
-    return []; // Centros de Mediación se manejan aparte
-  }
-  
-  // Palabras que activan búsqueda de facultades
-  const activadores = ['facultad', 'competencia', 'corresponde', 'puede', 'pueden', 'verificar', 'inspección', 'clausurar', 'revisar', 'controlar'];
-  const esConsultaFacultad = activadores.some(a => queryLower.includes(a)) || esConstruccion || esRuidoComercial;
-  
-  if (!esConsultaFacultad) return [];
-  
-  const resultados = [];
-  
-  for (const attr of ATRIBUCIONES_EXPLICITAS) {
-    // Verificar match mejorado
-    const palabrasClave = attr.frase.toLowerCase().split(' ').filter(p => p.length > 3);
-    const tienePalabraClave = palabrasClave.some(p => queryLower.includes(p));
-    
-    // También verificar categorías
-    const categoriasRelevantes = attr.categorias || [];
-    const tieneCategoriaRelevante = categoriasRelevantes.some(cat => {
-      if (cat === 'construccion' && esConstruccion) return true;
-      if (cat === 'comercio' && esRuidoComercial) return true;
-      return false;
-    });
-    
-    if (tienePalabraClave || tieneCategoriaRelevante) {
-      resultados.push(attr);
-    }
-  }
-  
-  return resultados;
+// FUNCIONES AUXILIARES (mantenidas del original)
+function normalizarTexto(texto) {
+    return texto.toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // eliminar acentos
+        .replace(/[^a-z0-9\s]/g, ' ') // eliminar caracteres especiales
+        .replace(/\s+/g, ' ') // espacios múltiples a simple
+        .trim();
 }
 
-// FUNCIÓN PRINCIPAL: Generar respuesta
-function generarRespuesta(query, atribuciones) {
-  const queryLower = query.toLowerCase();
-  
-  // DETECTAR TIPO ESPECÍFICO DE CONSULTA
-  const esRuidoVecinos = (queryLower.includes('ruido') || queryLower.includes('molestia')) && 
-                        (queryLower.includes('vecino') || queryLower.includes('vecinos') || queryLower.includes('residencial'));
-  const esRuidoComercial = (queryLower.includes('ruido') || queryLower.includes('sonido')) && 
-                          (queryLower.includes('comercio') || queryLower.includes('negocio') || queryLower.includes('industrial') || queryLower.includes('evento'));
-  
-  // CASO ESPECIAL: Ruido de vecinos → Centros de Mediación
-  if (esRuidoVecinos) {
-    const contactosMediacion = CONTACTOS.filter(c => c.tipo === 'mediacion');
-    
-    let respuesta = `**Consulta:** ${query}
-
-**Respuesta:**
-Para conflictos entre vecinos por ruido o molestias, corresponden los **Centros Públicos de Mediación** del municipio de Zapopan.
-
-**Centros de Mediación disponibles:**
-`;
-    
-    for (const contacto of contactosMediacion) {
-      respuesta += `**${contacto.dependencia}:**
-Teléfono: ${contacto.telefono} | Extensiones: ${contacto.extensiones.join(', ')}
-`;
-    }
-    
-    respuesta += `
-**Procedimiento:**
-1. Contacte el centro de mediación correspondiente a su zona
-2. Solicite cita para mediación entre partes
-3. Presente su caso ante mediadores certificados
-
-**Nota:** Los Centros Públicos de Mediación facilitan la resolución pacífica de conflictos vecinales sin necesidad de procedimientos judiciales.`;
-    
-    return respuesta;
-  }
-  
-  // CASO A: NO hay atribución explícita (y no es ruido de vecinos)
-  if (atribuciones.length === 0) {
-    // Si es ruido comercial pero no encontró atribución, sugerir términos
-    if (esRuidoComercial) {
-      return `**Consulta:** ${query}
-
-**Respuesta:**
-Para ruido proveniente de comercios, negocios o industrias, la **Dirección de Inspección y Vigilancia** tiene facultades de verificación.
-
-**Recomendación:**
-Reformule su consulta utilizando términos como:
-- "facultades para verificar ruido comercial"
-- "competencia en inspección de establecimientos"
-- "atribuciones para control de ruido industrial"
-
-**Nota:** El ruido de actividades comerciales/industriales sí compete a Inspección y Vigilancia.`;
-    }
-    
-    return `**Consulta:** ${query}
-
-**Respuesta:**
-No encontré atribución explícita que asigne esta materia a la Dirección de Inspección y Vigilancia de Zapopan.
-
-**Recomendación:**
-Para consultas sobre competencias municipales, utilice términos como "facultades de inspección" o "competencias en regulación urbana".
-
-**Nota:**
-Este sistema solo responde cuando documentos mencionan EXPLÍCITAMENTE facultades de la Dirección de Inspección y Vigilancia.`;
-  }
-  
-  // CASO B: SÍ hay atribución explícita
-  const attr = atribuciones[0];
-  
-  // Determinar tipo para contactos
-  const esPatrimonio = queryLower.includes('patrimonio') || queryLower.includes('histórico');
-  const esConstruccion = queryLower.includes('construcción') || queryLower.includes('obra') || queryLower.includes('demolición');
-  
-  // Construir respuesta según System Instructions V03
-  let respuesta = `**Consulta:** ${query}
-
-**Análisis de Situación**
-En reglamentos municipales se identifica atribución explícita:
-${attr.contexto}
-
-**Clasificación de Atribuciones**
-**Dirección de Inspección y Vigilancia:** Ejerce la facultad descrita.
-`;
-
-  if (esPatrimonio) {
-    respuesta += `**Dirección de Patrimonio Urbano:** Interviene en materias que afectan patrimonio histórico.
-`;
-  }
-  
-  if (esConstruccion) {
-    respuesta += `**Dirección de Licencias y Permisos de Construcción:** Responsable de autorizaciones previas.
-`;
-  }
-  
-  respuesta += `
-**Sustento Legal (Obligatorio)**
-${attr.articulo} (${attr.reglamento}): Atribución explícita verificada.
-
-**Información de Contacto**
-`;
-  
-  // Contacto de Inspección (siempre cuando hay atribución)
-  const contactoInspeccion = CONTACTOS.find(c => c.tipo === 'inspeccion');
-  if (contactoInspeccion) {
-    respuesta += `**${contactoInspeccion.dependencia}:**
-Teléfono: ${contactoInspeccion.telefono} | Extensiones: ${contactoInspeccion.extensiones.join(', ')}
-
-`;
-  }
-  
-  // Contactos adicionales según tipo
-  if (esPatrimonio) {
-    const contactoPatrimonio = CONTACTOS.find(c => c.tipo === 'patrimonio');
-    if (contactoPatrimonio) {
-      respuesta += `**${contactoPatrimonio.dependencia}:**
-Teléfono: ${contactoPatrimonio.telefono} | Extensiones: ${contactoPatrimonio.extensiones.join(', ')}
-
-`;
-    }
-  }
-  
-  if (esConstruccion) {
-    const contactoConstruccion = CONTACTOS.find(c => c.tipo === 'construccion');
-    if (contactoConstruccion) {
-      respuesta += `**${contactoConstruccion.dependencia}:**
-Teléfono: ${contactoConstruccion.telefono} | Extensiones: ${contactoConstruccion.extensiones.join(', ')}
-
-`;
-    }
-  }
-  
-  respuesta += `**Nota:** El incumplimiento puede derivar en sanciones administrativas.
-
----
-*Sistema con criterios estrictos de atribución documental*`;
-  
-  return respuesta;
+function contienePalabra(texto, palabra) {
+    const regex = new RegExp(`\\b${palabra}\\b`, 'i');
+    return regex.test(texto);
 }
 
-// SERVIDOR HTTP
+function determinarCategoriaConsulta(consulta) {
+    const consultaLower = consulta.toLowerCase();
+    
+    // Distinción CRÍTICA: ruido vecinos vs ruido comercial
+    if (contienePalabra(consultaLower, 'ruido') || contienePalabra(consultaLower, 'ruidoso')) {
+        if (contienePalabra(consultaLower, 'vecino') || contienePalabra(consultaLower, 'vecinos') || 
+            contienePalabra(consultaLower, 'fiesta') || contienePalabra(consultaLower, 'música') ||
+            contienePalabra(consultaLower, 'perro') || contienePalabra(consultaLower, 'mascota')) {
+            return 'ruido_vecinos'; // → Centros Públicos de Mediación
+        } else if (contienePalabra(consultaLower, 'bar') || contienePalabra(consultaLower, 'antro') ||
+                  contienePalabra(consultaLower, 'restaurante') || contienePalabra(consultaLower, 'comercio') ||
+                  contienePalabra(consultaLower, 'negocio') || contienePalabra(consultaLower, 'establecimiento')) {
+            return 'ruido_comercial'; // → Inspección y Vigilancia
+        }
+    }
+    
+    // Otras categorías
+    if (contienePalabra(consultaLower, 'construcción') || contienePalabra(consultaLower, 'obra') || 
+        contienePalabra(consultaLower, 'edificio') || contienePalabra(consultaLower, 'permiso') ||
+        contienePalabra(consultaLower, 'licencia') || contienePalabra(consultaLower, 'demolición')) {
+        return 'construccion';
+    }
+    
+    if (contienePalabra(consultaLower, 'comercio') || contienePalabra(consultaLower, 'venta') ||
+        contienePalabra(consultaLower, 'mercado') || contienePalabra(consultaLower, 'tienda') ||
+        contienePalabra(consultaLower, 'puesto') || contienePalabra(consultaLower, 'vía pública')) {
+        return 'comercio';
+    }
+    
+    if (contienePalabra(consultaLower, 'protección civil') || contienePalabra(consultaLower, 'seguridad') ||
+        contienePalabra(consultaLower, 'incendio') || contienePalabra(consultaLower, 'emergencia') ||
+        contienePalabra(consultaLower, 'riesgo')) {
+        return 'proteccion_civil';
+    }
+    
+    if (contienePalabra(consultaLower, 'mediación') || contienePalabra(consultaLower, 'conflicto') ||
+        contienePalabra(consultaLower, 'disputa') || contienePalabra(consultaLower, 'problema') ||
+        contienePalabra(consultaLower, 'pelea')) {
+        return 'mediacion';
+    }
+    
+    return 'general';
+}
+
+// GENERAR RESPUESTA CON RAG REAL
+function generarRespuesta(consulta) {
+    const categoria = determinarCategoriaConsulta(consulta);
+    const consultaNormalizada = normalizarTexto(consulta);
+    
+    // CASO 1: Ruido entre vecinos → Centros Públicos de Mediación
+    if (categoria === 'ruido_vecinos') {
+        const contactosMediacion = obtenerContactosRelevantes('mediacion');
+        return {
+            respuesta: `Para conflictos por ruido entre vecinos (fiestas, música, mascotas), te recomendamos acudir a los **Centros Públicos de Mediación**. Este tipo de conflictos entre particulares no es competencia de la Dirección de Inspección y Vigilancia.`,
+            atribuciones: [],
+            contactos: contactosMediacion,
+            categoria: categoria,
+            fuente: 'Sistema de clasificación automática'
+        };
+    }
+    
+    // BUSCAR ATRIBUCIONES REALES EN DOCUMENTOS
+    const atribucionesEncontradas = buscarAtribucionesEnDocumentos(consultaNormalizada);
+    
+    // CASO 2: Sin atribuciones encontradas
+    if (atribucionesEncontradas.length === 0) {
+        return {
+            respuesta: `No se encontraron atribuciones explícitas en los documentos oficiales para tu consulta sobre "${consulta}". Te recomendamos contactar directamente a la Dirección de Inspección y Vigilancia para verificar si tu caso aplica.`,
+            atribuciones: [],
+            contactos: [],
+            categoria: categoria,
+            fuente: 'Búsqueda en documentos oficiales'
+        };
+    }
+    
+    // CASO 3: Con atribuciones encontradas
+    const mejorAtribucion = atribucionesEncontradas[0];
+    const contactosRelevantes = obtenerContactosRelevantes(categoria);
+    
+    let respuesta = `Según **${mejorAtribucion.source}** (${mejorAtribucion.articulo}):\n\n`;
+    respuesta += `"${mejorAtribucion.text}"\n\n`;
+    
+    if (contactosRelevantes.length > 0) {
+        respuesta += `**Contactos relevantes:**\n`;
+        contactosRelevantes.forEach(contacto => {
+            respuesta += `• ${contacto.dependencia}: ${contacto.telefono}`;
+            if (contacto.extension) respuesta += ` ext. ${contacto.extension}`;
+            if (contacto.horario) respuesta += ` (${contacto.horario})`;
+            respuesta += `\n`;
+        });
+    }
+    
+    return {
+        respuesta: respuesta,
+        atribuciones: atribucionesEncontradas.slice(0, 3), // Top 3
+        contactos: contactosRelevantes,
+        categoria: categoria,
+        fuente: mejorAtribucion.source
+    };
+}
+
+// SERVER HTTP (mantenido del original)
 const server = http.createServer((req, res) => {
-  const parsedUrl = url.parse(req.url, true);
-  const path = parsedUrl.pathname;
-  
-  // CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  
-  if (req.method === 'OPTIONS') {
-    res.writeHead(200);
-    res.end();
-    return;
-  }
-  
-  // Health check
-  if (path === '/health' || path === '/api/health') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({
-      status: 'ok',
-      service: 'Chatbot Zapopan - Sistema Final',
-      version: '3.0',
-      criteria: 'explicit_attribution_required',
-      timestamp: new Date().toISOString()
-    }));
-    return;
-  }
-  
-  // API Chat
-  if (path === '/api/chat' && req.method === 'POST') {
-    let body = '';
+    const parsedUrl = url.parse(req.url, true);
+    const pathname = parsedUrl.pathname;
     
-    req.on('data', chunk => {
-      body += chunk.toString();
-    });
+    // Configurar CORS
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     
-    req.on('end', () => {
-      try {
-        const data = JSON.parse(body);
-        
-        // Validar token
-        if (!data.token || data.token !== TOKEN) {
-          res.writeHead(401, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: false, error: 'Token inválido' }));
-          return;
-        }
-        
-        // Validar mensaje
-        if (!data.message || data.message.trim() === '') {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: false, error: 'Mensaje vacío' }));
-          return;
-        }
-        
-        const query = data.message.trim();
-        const atribuciones = buscarAtribucion(query);
-        const response = generarRespuesta(query, atribuciones);
-        
+    if (req.method === 'OPTIONS') {
+        res.writeHead(200);
+        res.end();
+        return;
+    }
+    
+    // ENDPOINTS
+    if (pathname === '/health' || pathname === '/api/health') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-          success: true,
-          query: query,
-          response: response,
-          has_explicit_attribution: atribuciones.length > 0,
-          attribution_count: atribuciones.length,
-          timestamp: new Date().toISOString()
-        }));
-        
-      } catch (error) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: false, error: 'Error interno' }));
-      }
-    });
+        res.end(JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }));
+        return;
+    }
     
-    return;
-  }
-  
-  // Frontend
-  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-  res.end(`
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Chatbot Inspección Zapopan</title>
-    <style>
-        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
-        .header { background: #003366; color: white; padding: 20px; border-radius: 10px; text-align: center; }
-        .chat { margin: 20px 0; }
-        input { width: 70%; padding: 10px; }
-        button { padding: 10px 20px; background: #003366; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        .response { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px; white-space: pre-wrap; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>Chatbot Inspección Zapopan</h1>
-        <p>Sistema Final v3.0 - Atribución Explícita Requerida</p>
-        <p><strong>Token:</strong> vercel_public_access</p>
-    </div>
+    if (pathname === '/api/login') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ token: TOKEN, expiresIn: 3600 }));
+        return;
+    }
     
-    <div class="chat">
-        <input type="text" id="query" placeholder="Ej: 'facultades para verificar comercios'">
-        <button onclick="send()">Consultar</button>
-        <div class="response" id="response">Escribe una consulta</div>
-    </div>
-    
-    <script>
-        function send() {
-            const query = document.getElementById('query').value.trim();
-            if (!query) return alert('Escribe una consulta');
-            
-            document.getElementById('response').innerHTML = 'Procesando...';
-            
-            fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    message: query, 
-                    token: 'vercel_public_access' 
-                })
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    document.getElementById('response').innerHTML = 
-                        '<strong>Respuesta:</strong><br><br>' + 
-                        data.response.replace(/\\n/g, '<br>');
-                } else {
-                    document.getElementById('response').innerHTML = 'Error: ' + data.error;
-                }
-            })
-            .catch(err => {
-                document.getElementById('response').innerHTML = 'Error de conexión';
-            });
+    if (pathname === '/api/chat') {
+        if (req.method !== 'POST') {
+            res.writeHead(405, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Método no permitido' }));
+            return;
         }
         
-        // Ejemplo
-        document.getElementById('query').value = "facultades de inspección";
-    </script>
-</body>
-</html>
-  `);
+        let body = '';
+        req.on('data', chunk => { body += chunk.toString(); });
+        req.on('end', () => {
+            try {
+                const data = JSON.parse(body);
+                
+                // Validación básica
+                if (!data.message || typeof data.message !== 'string') {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Consulta inválida' }));
+                    return;
+                }
+                
+                // Generar respuesta con RAG REAL
+                const respuesta = generarRespuesta(data.message);
+                
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    response: respuesta.respuesta,
+                    atribuciones: respuesta.atribuciones,
+                    contactos: respuesta.contactos,
+                    categoria: respuesta.categoria,
+                    fuente: respuesta.fuente,
+                    timestamp: new Date().toISOString()
+                }));
+                
+            } catch (error) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Error procesando consulta', details: error.message }));
+            }
+        });
+        return;
+    }
+    
+    // Ruta por defecto
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ 
+        message: 'API Chatbot Inspección Zapopan - RAG Real',
+        version: '3.2-rag-real',
+        endpoints: ['/health', '/api/login', '/api/chat'],
+        status: 'operational'
+    }));
 });
 
-// Iniciar
-if (require.main === module) {
-  server.listen(PORT, () => {
-    console.log(`✅ Servidor final en puerto ${PORT}`);
-  });
-}
+// Iniciar servidor
+server.listen(PORT, () => {
+    console.log(`🚀 Servidor RAG Real escuchando en puerto ${PORT}`);
+    console.log(`📁 Documentos cargados: 4 carpetas con documentos JSONL`);
+    console.log(`🏰 Sistema: Búsqueda real en documentos oficiales`);
+});
 
 module.exports = server;

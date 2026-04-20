@@ -1,0 +1,5 @@
+{"dependencia": "Dirección de Inspección y Vigilancia", "telefono": "3338182200", "extensiones": "3312,3313,3315,3322,3324,3331,3330,3342", "horario": "Lunes a Viernes 8:00-15:00", "responsable": "Lic. María González", "tipo": "contacto_principal"}
+{"dependencia": "Centros Públicos de Mediación", "telefono": "3338181818", "extension": "4500", "horario": "Lunes a Viernes 9:00-14:00", "responsable": "Lic. Juan Pérez", "tipo": "mediacion", "notas": "Para conflictos vecinales por ruido entre particulares"}
+{"dependencia": "Subdirección de Construcción", "telefono": "3338182200", "extension": "3320", "horario": "Lunes a Viernes 8:00-15:00", "responsable": "Arq. Roberto Sánchez", "tipo": "construccion"}
+{"dependencia": "Subdirección de Comercio", "telefono": "3338182200", "extension": "3318", "horario": "Lunes a Viernes 8:00-15:00", "responsable": "Lic. Ana Martínez", "tipo": "comercio"}
+{"dependencia": "Subdirección de Protección Civil", "telefono": "3338182200", "extension": "3340", "horario": "Lunes a Viernes 8:00-15:00", "responsable": "Ing. Carlos Ramírez", "tipo": "proteccion_civil"}
