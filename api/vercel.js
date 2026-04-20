@@ -10,12 +10,12 @@ const TOKEN = 'vercel_public_access';
 // CARGAR FUNCIONES RAG REAL
 const { buscarAtribucionesEnDocumentos, obtenerContactosRelevantes } = require('./rag_functions');
 
-// FUNCIONES AUXILIARES (mantenidas del original)
+// FUNCIONES AUXILIARES
 function normalizarTexto(texto) {
     return texto.toLowerCase()
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // eliminar acentos
-        .replace(/[^a-z0-9\s]/g, ' ') // eliminar caracteres especiales
-        .replace(/\s+/g, ' ') // espacios múltiples a simple
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
         .trim();
 }
 
@@ -32,15 +32,14 @@ function determinarCategoriaConsulta(consulta) {
         if (contienePalabra(consultaLower, 'vecino') || contienePalabra(consultaLower, 'vecinos') || 
             contienePalabra(consultaLower, 'fiesta') || contienePalabra(consultaLower, 'música') ||
             contienePalabra(consultaLower, 'perro') || contienePalabra(consultaLower, 'mascota')) {
-            return 'ruido_vecinos'; // → Centros Públicos de Mediación
+            return 'ruido_vecinos';
         } else if (contienePalabra(consultaLower, 'bar') || contienePalabra(consultaLower, 'antro') ||
                   contienePalabra(consultaLower, 'restaurante') || contienePalabra(consultaLower, 'comercio') ||
                   contienePalabra(consultaLower, 'negocio') || contienePalabra(consultaLower, 'establecimiento')) {
-            return 'ruido_comercial'; // → Inspección y Vigilancia
+            return 'ruido_comercial';
         }
     }
     
-    // Otras categorías
     if (contienePalabra(consultaLower, 'construcción') || contienePalabra(consultaLower, 'obra') || 
         contienePalabra(consultaLower, 'edificio') || contienePalabra(consultaLower, 'permiso') ||
         contienePalabra(consultaLower, 'licencia') || contienePalabra(consultaLower, 'demolición')) {
@@ -68,7 +67,6 @@ function determinarCategoriaConsulta(consulta) {
     return 'general';
 }
 
-// GENERAR RESPUESTA CON RAG REAL
 function generarRespuesta(consulta) {
     const categoria = determinarCategoriaConsulta(consulta);
     const consultaNormalizada = normalizarTexto(consulta);
@@ -118,19 +116,19 @@ function generarRespuesta(consulta) {
     
     return {
         respuesta: respuesta,
-        atribuciones: atribucionesEncontradas.slice(0, 3), // Top 3
+        atribuciones: atribucionesEncontradas.slice(0, 3),
         contactos: contactosRelevantes,
         categoria: categoria,
         fuente: mejorAtribucion.source
     };
 }
 
-// SERVER HTTP (mantenido del original)
+// SERVER HTTP SIMPLIFICADO Y CORREGIDO
 const server = http.createServer((req, res) => {
     const parsedUrl = url.parse(req.url, true);
     const pathname = parsedUrl.pathname;
     
-    // Configurar CORS
+    // CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -141,23 +139,32 @@ const server = http.createServer((req, res) => {
         return;
     }
     
-    // ENDPOINTS
+    // ENDPOINTS CORREGIDOS
     if (pathname === '/health' || pathname === '/api/health') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }));
+        res.end(JSON.stringify({ 
+            status: 'ok', 
+            service: 'Chatbot Zapopan RAG Real',
+            version: '3.2-rag-real',
+            timestamp: new Date().toISOString() 
+        }));
         return;
     }
     
     if (pathname === '/api/login') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ token: TOKEN, expiresIn: 3600 }));
+        res.end(JSON.stringify({ 
+            token: TOKEN, 
+            expiresIn: 3600,
+            success: true 
+        }));
         return;
     }
     
     if (pathname === '/api/chat') {
         if (req.method !== 'POST') {
             res.writeHead(405, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Método no permitido' }));
+            res.end(JSON.stringify({ error: 'Método no permitido', success: false }));
             return;
         }
         
@@ -170,7 +177,14 @@ const server = http.createServer((req, res) => {
                 // Validación básica
                 if (!data.message || typeof data.message !== 'string') {
                     res.writeHead(400, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ error: 'Consulta inválida' }));
+                    res.end(JSON.stringify({ error: 'Consulta inválida', success: false }));
+                    return;
+                }
+                
+                // Validar token (simple)
+                if (data.token !== TOKEN) {
+                    res.writeHead(401, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Token inválido', success: false }));
                     return;
                 }
                 
@@ -179,6 +193,7 @@ const server = http.createServer((req, res) => {
                 
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({
+                    success: true,
                     response: respuesta.respuesta,
                     atribuciones: respuesta.atribuciones,
                     contactos: respuesta.contactos,
@@ -189,7 +204,11 @@ const server = http.createServer((req, res) => {
                 
             } catch (error) {
                 res.writeHead(500, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'Error procesando consulta', details: error.message }));
+                res.end(JSON.stringify({ 
+                    error: 'Error procesando consulta', 
+                    details: error.message,
+                    success: false 
+                }));
             }
         });
         return;
@@ -201,7 +220,8 @@ const server = http.createServer((req, res) => {
         message: 'API Chatbot Inspección Zapopan - RAG Real',
         version: '3.2-rag-real',
         endpoints: ['/health', '/api/login', '/api/chat'],
-        status: 'operational'
+        status: 'operational',
+        success: true
     }));
 });
 
